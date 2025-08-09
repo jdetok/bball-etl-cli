@@ -26,9 +26,9 @@ PROJECT INTENT:
 */
 
 type Params struct {
-	Mode [2]string
-	Szn  [2]string
-	Lg   [2]string
+	Mode [2]string // run mode e.g. build, daily, etc
+	Szn  [2]string // season selector, e.g. 2024 for 2024-25 NBA/2024 WNBA
+	Lg   [2]string // league selector, nba or wnba
 }
 
 func parseArgs() Params {
@@ -56,7 +56,43 @@ func main() {
 	}
 
 	var p Params = parseArgs()
-	fmt.Println(p.Mode)
-	fmt.Println(p.Szn)
-	fmt.Println(p.Lg)
+
+	// DEFINE BEHAVIOR BASED ON MODE ARGUMENT
+	switch p.Mode[1] {
+	case "": // no mode passed,
+		e.Msg = "a mode must be specified"
+		fmt.Println(e.NewErr())
+		os.Exit(1)
+	case "build":
+		// build etl: all seasons 1970 through current
+		fmt.Println("build mode selected:", p.Mode)
+	case "daily":
+		// daily etl: etl for previous day's games
+		// might be worth switching on league from here, then can handle which
+		// league to run in the bash script rather than in the application
+		fmt.Println("daily mode selected:", p.Mode)
+	case "custom": // "custom" run - a season MUST be specified, lg defaults to both
+		fmt.Println("custom mode selected:", p.Mode)
+		if p.Szn[1] == "" {
+			e.Msg = "a season (-szn) must be specified in custom mode"
+			fmt.Println(e.NewErr())
+			os.Exit(1)
+		}
+		switch p.Lg[1] {
+		case "":
+			// RUN FOR BOTH NBA AND WNBA
+			fmt.Println("no league argument:", p.Lg)
+		case "nba":
+			// NBA ONLY
+			fmt.Println("nba as league argumenet:", p.Lg)
+		case "wnba":
+			// WNBA ONLY
+			fmt.Println("wnba as league argumenet:", p.Lg)
+		}
+	default:
+		e.Msg = fmt.Sprintf(
+			"invalid mode: '%s' is not an option", p.Mode)
+		fmt.Println(e.NewErr())
+		os.Exit(1)
+	}
 }
