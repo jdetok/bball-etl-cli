@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"github.com/jdetok/golib/errd"
 )
 
 /*
@@ -22,14 +25,38 @@ PROJECT INTENT:
 	- eventually, define flags for different endpoint endpoints
 */
 
-func main() {
-	// args := os.Args
-	var word string
+type Params struct {
+	Mode [2]string
+	Szn  [2]string
+	Lg   [2]string
+}
 
-	// wordPtr := flag.String("word", "foo", "some string")
-	flag.StringVar(&word, "word", "foo", "some string")
+func parseArgs() Params {
+	var p = Params{
+		Mode: [2]string{"mode", ""},
+		Szn:  [2]string{"szn", ""},
+		Lg:   [2]string{"lg", ""},
+	}
+	flag.StringVar(&p.Mode[1], "mode", "", "etl run-mode")
+	flag.StringVar(&p.Szn[1], "szn", "", "nba/wnba season e.g. 2024")
+	flag.StringVar(&p.Lg[1], "lg", "", "nba or wnba")
 	flag.Parse()
-	fmt.Println("word arg: ", word)
+	return p
+}
 
-	// fmt.Println(args)
+func main() {
+	e := errd.InitErr()
+	runArgs := os.Args
+
+	// one argument by default (name of program) - exit if nothing passed
+	if len(runArgs) == 1 {
+		e.Msg = "an argument must be passed"
+		fmt.Println(e.NewErr())
+		os.Exit(1)
+	}
+
+	var p Params = parseArgs()
+	fmt.Println(p.Mode)
+	fmt.Println(p.Szn)
+	fmt.Println(p.Lg)
 }
