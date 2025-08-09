@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// commment for testing
 func main() {
 	// args := os.Args
 	var word string
