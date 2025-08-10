@@ -1,0 +1,26 @@
+services:
+  tstpgbball:
+    build: .
+    env_file: 
+      - .envtst
+    container_name: tstpgbball
+    ports:
+      - "8769:5432"
+    networks:
+      tstpgbball-net:
+        ipv4_address: 10.0.69.182
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+networks:
+  tstpgbball-net:
+    name: tstpgbball-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.69.0/24
+          gateway: 10.0.69.1

@@ -76,6 +76,8 @@ func main() {
 	switch p.Env[1] {
 	case "dev":
 		pg = pgresd.GetEnvFilePG("./.envdev")
+	case "test":
+		pg = pgresd.GetEnvFilePG("./.envtst")
 	case "prod":
 		pg = pgresd.GetEnvPG() // reads .env
 	}
