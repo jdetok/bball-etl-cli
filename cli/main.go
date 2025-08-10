@@ -176,6 +176,10 @@ func main() {
 				fmt.Println(e.BuildErr(err))
 				os.Exit(1)
 			}
+			compMsg = fmt.Sprintf(
+				"\n---- etl for %s nba/wnba seasons | total rows affected: %d",
+				p.Szn[1], cnf.RowCnt,
+			)
 		case "nba", "wnba":
 			l, err := logd.InitLogger("z_log",
 				fmt.Sprintf("szn_etl_%s_%s", p.Lg[1], p.Szn[1]))
@@ -185,13 +189,17 @@ func main() {
 				os.Exit(1)
 			}
 			cnf.L = l // assign to cnf
-			/*
-				var lg string
-				if p.Lg[1] == "nba" {
-					lg = "00"
-				} else {
-					lg = "10"
-				}*/
+			// TODO: specific season fetch
+			if err := etl.LgSznGlogs(&cnf, p.Lg[1], p.Szn[1]); err != nil {
+				e.Msg = fmt.Sprintf("error running etl for %s %s season",
+					p.Szn[1], p.Lg[1])
+				fmt.Println(e.BuildErr(err))
+				os.Exit(1)
+			}
+			compMsg = fmt.Sprintf(
+				"\n---- etl for %s %s seasons | total rows affected: %d",
+				p.Szn[1], p.Lg[1], cnf.RowCnt,
+			)
 		}
 
 		// NO ARGS PASSED - ERROR OUT

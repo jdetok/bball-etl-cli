@@ -66,6 +66,45 @@ func GLogParams() LgTbls {
 	return lt
 }
 
+// TODO: specific season/league ETL
+func LgSznGlogs(cnf *Conf, lg, szn string) error {
+	e := errd.InitErr()
+	lt := GLogParams()
+	var lg_id string
+	switch lg {
+	case "nba":
+		lg_id = lt.lgs[0] // "00"
+	case "wnba":
+		lg_id = lt.lgs[1] // "10"
+	}
+
+	for _, t := range lt.tbls {
+		for _, s := range []string{"Regular+Season", "Playoffs"} {
+			// create request
+			r := GameLogReqNew(lg_id, szn, s, t.PlTm, "", "")
+			cnf.L.WriteLog(fmt.Sprintf(
+				"attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s",
+				r.Endpoint, lg, szn, s, t.PlTm))
+
+			// attempt to fetch & insert for current iteration
+			// func returns run of insert
+			err := GameLogETL(cnf, r, t.Name, t.PrimKey)
+			if err != nil {
+				e.Msg = fmt.Sprintf(
+					"error during daily game log ETL. LG=%s, SZN=%s %s, PLTM=%s",
+					lg, szn, s, t.PlTm)
+				cnf.L.WriteLog(e.Msg)
+				return e.BuildErr(err)
+			}
+			// success, next call
+			cnf.L.WriteLog(fmt.Sprintf(
+				"finished with LG=%s, SZN=%s %s, PLTM=%s",
+				lg, szn, s, t.PlTm))
+		}
+	}
+	return nil
+}
+
 // run single season
 func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
 	e := errd.InitErr()
@@ -76,7 +115,7 @@ func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
 				"getting int from season %s", szn)
 			cnf.L.WriteLog(e.Msg)
 			return e.BuildErr(err)
-		}
+		} // no wnba pre 1997
 		if lgs[i] == "10" && sznY < 1996 {
 			cnf.L.WriteLog(fmt.Sprintf(
 				"skipping WNBA %s - first WNBA season was 1997-98", szn))
