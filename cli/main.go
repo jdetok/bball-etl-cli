@@ -96,8 +96,7 @@ func main() {
 		e.Msg = "a mode must be specified"
 		fmt.Println(e.NewErr())
 		os.Exit(1)
-	case "daily":
-		// daily etl: etl for previous day's games
+	case "daily": // daily etl: etl for previous day's games
 		// initialize logger with nightly log
 		l, err := logd.InitLogger("z_log_d", "dly_etl")
 		if err != nil {
@@ -119,8 +118,7 @@ func main() {
 			"\n---- daily etl for %v complete | total rows affected: %d",
 			etl.Yesterday(time.Now()), cnf.RowCnt,
 		)
-	case "build":
-		// build etl: all seasons 1970 through current
+	case "build": // build etl: all seasons 1970 through current
 		l, err := logd.InitLogger("z_log_bld", "bld_etl")
 		if err != nil {
 			e.Msg = "error initializing logger"
