@@ -28,8 +28,19 @@ import (
 	"github.com/jdetok/bball-etl-cli/etl"
 	"github.com/jdetok/golib/errd"
 	"github.com/jdetok/golib/logd"
+	"github.com/jdetok/golib/maild"
 	"github.com/jdetok/golib/pgresd"
 )
+
+func EmailLog(l logd.Logger) error {
+	m := maild.MakeMail(
+		[]string{"jdekock17@gmail.com"},
+		"Go bball ETL log attached",
+		"the Go bball ETL process ran. The log is attached.",
+	)
+	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
+	return m.SendMIMEEmail(l.LogF)
+}
 
 type Params struct {
 	Mode [2]string // run mode e.g. build, daily, etc
@@ -231,4 +242,14 @@ func main() {
 			compMsg, // assigned in switch based on passed mode
 		),
 	)
+
+	// email log file to myself
+	EmailLog(cnf.L)
+	if err != nil {
+		e.Msg = "error emailing log"
+		cnf.L.WriteLog(e.Msg)
+		fmt.Println(e.BuildErr(err))
+		os.Exit(1)
+	}
+
 }

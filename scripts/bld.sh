@@ -15,7 +15,7 @@ until [ "$(docker inspect -f '{{.State.Health.Status}}' tstpgbball)" = "healthy"
 done
 
 # fetch & load to database
-go run ./cli -env test -mode build || { echo \
+./bin/cli -env test -mode build || { echo \
     "go etl process failed, compose down & exit"; \
     docker compose down --rmi all; exit 1; }
 echo "go etl process successful"

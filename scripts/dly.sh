@@ -10,7 +10,7 @@ cd $DIR
 export PATH=$PATH:/usr/local/go/bin
 
 # RUN CLI PROCESS IN DAILY MODE
-go run ./cli -env prod -mode daily
+./bin/cli -env prod -mode daily
 
 # TODO: open the log file (most recent in z_log) and append to it
 LOGF=$LOGD/$(ls $LOGD -t | head -n 1)
