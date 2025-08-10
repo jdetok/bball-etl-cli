@@ -22,7 +22,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -36,6 +35,7 @@ type Params struct {
 	Mode [2]string // run mode e.g. build, daily, etc
 	Szn  [2]string // season selector, e.g. 2024 for 2024-25 NBA/2024 WNBA
 	Lg   [2]string // league selector, nba or wnba
+	Env  [2]string //
 }
 
 func parseArgs() Params {
@@ -43,10 +43,12 @@ func parseArgs() Params {
 		Mode: [2]string{"mode", ""},
 		Szn:  [2]string{"szn", ""},
 		Lg:   [2]string{"lg", ""},
+		Env:  [2]string{"env", ""},
 	}
 	flag.StringVar(&p.Mode[1], "mode", "", "etl run-mode")
 	flag.StringVar(&p.Szn[1], "szn", "", "nba/wnba season e.g. 2024")
 	flag.StringVar(&p.Lg[1], "lg", "", "nba or wnba")
+	flag.StringVar(&p.Env[1], "env", "dev", "prod or dev postgres database")
 	flag.Parse()
 	return p
 }
@@ -66,9 +68,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// init database
-	// TODO - dev or prod connection based on flag
-	pg := pgresd.GetEnvPG()
+	// parse flags
+	var p Params = parseArgs()
+
+	// init database based on -dev flag
+	var pg pgresd.PostGres
+	switch p.Env[1] {
+	case "dev":
+		pg = pgresd.GetEnvFilePG("./.envdev")
+	case "prod":
+		pg = pgresd.GetEnvPG() // reads .env
+	}
 	pg.MakeConnStr()
 	db, err := pg.Conn()
 	if err != nil {
@@ -80,19 +90,42 @@ func main() {
 	cnf.DB = db
 	cnf.RowCnt = 0
 
-	// parse through params
-	var p Params = parseArgs()
+	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
 	switch p.Mode[1] {
 	case "": // no mode passed,
 		e.Msg = "a mode must be specified"
 		fmt.Println(e.NewErr())
 		os.Exit(1)
+	case "daily":
+		// daily etl: etl for previous day's games
+		// initialize logger with nightly log
+		l, err := logd.InitLogger("z_log_d", "dly_etl")
+		if err != nil {
+			e.Msg = "error initializing logger"
+			fmt.Println(e.BuildErr(err))
+			os.Exit(1)
+		}
+		cnf.L = l // assign to cnf
+
+		// RUN NIGHTLY ETL
+		if err = etl.RunNightlyETL(cnf); err != nil {
+			e.Msg = fmt.Sprintf(
+				"error with %v daily etl", etl.Yesterday(time.Now()))
+			cnf.L.WriteLog(e.Msg)
+			fmt.Println(e.BuildErr(err))
+			os.Exit(1)
+		}
+		compMsg = fmt.Sprintf( // assign in switch
+			"\n---- daily etl for %v complete | total rows affected: %d",
+			etl.Yesterday(time.Now()), cnf.RowCnt,
+		)
 	case "build":
 		// build etl: all seasons 1970 through current
 		l, err := logd.InitLogger("z_log_bld", "bld_etl")
 		if err != nil {
 			e.Msg = "error initializing logger"
-			log.Fatal(e.BuildErr(err))
+			fmt.Println(e.BuildErr(err))
+			os.Exit(1)
 		}
 		cnf.L = l // assign to cnf
 
@@ -105,33 +138,12 @@ func main() {
 			e.Msg = fmt.Sprintf(
 				"error running season etl: start year: %s | end year: %s", st, en)
 			cnf.L.WriteLog(e.Msg)
-			log.Fatal(e.BuildErr(err))
+			fmt.Println(e.BuildErr(err))
+			os.Exit(1)
 		}
 		compMsg = fmt.Sprintf(
 			"\n---- etl for seasons between %s and %s | total rows affected: %d",
 			st, en, cnf.RowCnt,
-		)
-
-	case "daily":
-		// daily etl: etl for previous day's games
-		// initialize logger with nightly log
-		l, err := logd.InitLogger("z_log_d", "dly_etl")
-		if err != nil {
-			e.Msg = "error initializing logger"
-			log.Fatal(e.BuildErr(err))
-		}
-		cnf.L = l // assign to cnf
-
-		// RUN NIGHTLY ETL
-		if err = etl.RunNightlyETL(cnf); err != nil {
-			e.Msg = fmt.Sprintf(
-				"error with %v daily etl", etl.Yesterday(time.Now()))
-			cnf.L.WriteLog(e.Msg)
-			log.Fatal(e.BuildErr(err))
-		}
-		compMsg = fmt.Sprintf( // assign in switch
-			"\n---- daily etl for %v complete | total rows affected: %d",
-			etl.Yesterday(time.Now()), cnf.RowCnt,
 		)
 
 	case "custom": // "custom" run - a season MUST be specified, lg defaults to both
