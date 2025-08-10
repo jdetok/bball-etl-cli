@@ -22,7 +22,7 @@ select
     c.team as "team", 
     c.team_long as "team_long",
     count(distinct a.game_id) as "gp", 
-    sum(a.mins) as "minutes",
+    round(avg(a.mins), 2) as "minutes",
     round(avg(a.pts), 2) as "points", round(avg(a.ast), 2) as "assists", 
 	round(avg(a.reb), 2) as "rebounds", round(avg(a.stl), 2) as "steals", 
     round(avg(a.blk), 2) as "blocks", 
@@ -47,4 +47,3 @@ inner join lg.szn e on e.szn_id = 99999
 where b.lg_id < 2 
 group by a.player_id, d.lg, c.team_id, e.szn_id, b.player, e.szn_desc, 
 	e.wszn_desc, c.team, c.team_long;
-
