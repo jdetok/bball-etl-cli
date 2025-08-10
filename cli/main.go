@@ -1,3 +1,21 @@
+/*
+BBALL ETL COMMAND LINE INTERFACE
+PROJECT INTENT:
+  - create a command line interface for the bball-etl-go package to eliminate
+    the need for separate directories for the nightly/build runs of the etl
+
+- exit program if no arguments are passed (args slices == 1)
+- mode flag:
+	- build: runs full etl all games 1970 through current
+	- daily: runs etl for games from previous day
+	- custom (not yet build): pass a season and league (optional) to run the etl
+		for a specific season
+
+- TODO:
+	- custom etl
+	- eventually, define flags for different endpoints
+*/
+
 package main
 
 import (
@@ -12,23 +30,6 @@ import (
 	"github.com/jdetok/golib/logd"
 	"github.com/jdetok/golib/pgresd"
 )
-
-/*
-PROJECT INTENT:
-  - create a command line interface for the bball-etl-go package to eliminate
-    the need for separate directories for the nightly/build runs of the etl
-*/
-
-/* TODO:
-- exit program if no arguments are passed (args slices == 1)
-- define a flag for mode:
-	- build: runs full etl all games 1970 through current
-	- daily: runs etl for games from previous day
-
-- LATER:
-	- define an additional flag for league
-	- eventually, define flags for different endpoint endpoints
-*/
 
 type Params struct {
 	Mode [2]string // run mode e.g. build, daily, etc
@@ -86,8 +87,7 @@ func main() {
 		os.Exit(1)
 	case "build":
 		// build etl: all seasons 1970 through current
-		// initialize logger with build log
-		l, err := logd.InitLogger("z_log_b", "build_etl")
+		l, err := logd.InitLogger("z_log_bld", "bld_etl")
 		if err != nil {
 			e.Msg = "error initializing logger"
 			log.Fatal(e.BuildErr(err))
@@ -113,7 +113,7 @@ func main() {
 	case "daily":
 		// daily etl: etl for previous day's games
 		// initialize logger with nightly log
-		l, err := logd.InitLogger("z_log_n", "nightly_etl")
+		l, err := logd.InitLogger("z_log_d", "dly_etl")
 		if err != nil {
 			e.Msg = "error initializing logger"
 			log.Fatal(e.BuildErr(err))
@@ -123,12 +123,12 @@ func main() {
 		// RUN NIGHTLY ETL
 		if err = etl.RunNightlyETL(cnf); err != nil {
 			e.Msg = fmt.Sprintf(
-				"error with %v nightly etl", etl.Yesterday(time.Now()))
+				"error with %v daily etl", etl.Yesterday(time.Now()))
 			cnf.L.WriteLog(e.Msg)
 			log.Fatal(e.BuildErr(err))
 		}
 		compMsg = fmt.Sprintf( // assign in switch
-			"\n---- nightly etl for %v complete | total rows affected: %d",
+			"\n---- daily etl for %v complete | total rows affected: %d",
 			etl.Yesterday(time.Now()), cnf.RowCnt,
 		)
 
