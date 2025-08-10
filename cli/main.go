@@ -98,7 +98,9 @@ func main() {
 		e.Msg = "a mode must be specified"
 		fmt.Println(e.NewErr())
 		os.Exit(1)
-	case "daily": // daily etl: etl for previous day's games
+
+	// daily etl: etl for previous day's games
+	case "daily":
 		// initialize logger with nightly log
 		l, err := logd.InitLogger("z_log_d", "dly_etl")
 		if err != nil {
@@ -120,7 +122,9 @@ func main() {
 			"\n---- daily etl for %v complete | total rows affected: %d",
 			etl.Yesterday(time.Now()), cnf.RowCnt,
 		)
-	case "build": // build etl: all seasons 1970 through current
+
+		// build etl: all seasons 1970 through current
+	case "build":
 		l, err := logd.InitLogger("z_log_bld", "bld_etl")
 		if err != nil {
 			e.Msg = "error initializing logger"
@@ -146,24 +150,51 @@ func main() {
 			st, en, cnf.RowCnt,
 		)
 
-	case "custom": // "custom" run - a season MUST be specified, lg defaults to both
-		fmt.Println("custom mode selected:", p.Mode)
+		// "custom" run - a season MUST be specified, lg defaults to both
+	case "custom":
+		// exit if no season passed
 		if p.Szn[1] == "" {
 			e.Msg = "a season (-szn) must be specified in custom mode"
 			fmt.Println(e.NewErr())
 			os.Exit(1)
 		}
+		// switch on lg to determine whether to do both leagues or just one
 		switch p.Lg[1] {
 		case "":
+			l, err := logd.InitLogger("z_log",
+				fmt.Sprintf("szn_etl_%s", p.Szn[1]))
+			if err != nil {
+				e.Msg = "error initializing logger"
+				fmt.Println(e.BuildErr(err))
+				os.Exit(1)
+			}
+			cnf.L = l // assign to cnf
+
 			// RUN FOR BOTH NBA AND WNBA
-			fmt.Println("no league argument:", p.Lg)
-		case "nba":
-			// NBA ONLY
-			fmt.Println("nba as league argumenet:", p.Lg)
-		case "wnba":
-			// WNBA ONLY
-			fmt.Println("wnba as league argumenet:", p.Lg)
+			if err := etl.GLogSeasonETL(&cnf, p.Szn[1]); err != nil {
+				e.Msg = fmt.Sprintf("error running etl for %s season", p.Szn[1])
+				fmt.Println(e.BuildErr(err))
+				os.Exit(1)
+			}
+		case "nba", "wnba":
+			l, err := logd.InitLogger("z_log",
+				fmt.Sprintf("szn_etl_%s_%s", p.Lg[1], p.Szn[1]))
+			if err != nil {
+				e.Msg = "error initializing logger"
+				fmt.Println(e.BuildErr(err))
+				os.Exit(1)
+			}
+			cnf.L = l // assign to cnf
+			/*
+				var lg string
+				if p.Lg[1] == "nba" {
+					lg = "00"
+				} else {
+					lg = "10"
+				}*/
 		}
+
+		// NO ARGS PASSED - ERROR OUT
 	default:
 		e.Msg = fmt.Sprintf(
 			"invalid mode: '%s' is not an option", p.Mode)

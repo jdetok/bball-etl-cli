@@ -111,6 +111,7 @@ func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
 	return nil
 }
 
+// should be able to use this for the custom mode without league specified
 func GLogSeasonETL(cnf *Conf, szn string) error {
 	e := errd.InitErr()
 	lt := GLogParams()
