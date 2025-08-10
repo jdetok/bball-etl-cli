@@ -17,7 +17,7 @@ LOGF=$LOGD/$(ls $LOGD -t | head -n 1)
 
 echo "attempting to run sp_nightly_call() from call.sql at $(date)..." | tee -a $LOGF
 # call procedures: change container name as needed
-docker exec -i pgbball psql -U postgres -d bball < ./dly.sql 2>&1 | tee -a $LOGF
+docker exec -i dev-pgbball psql -U postgres -d bballdev < ./dly.sql 2>&1 | tee -a $LOGF
 # docker exec -i devpg psql -U postgres -d bball < ./call.sql
 
 echo "finished running sp_nightly_call()" | tee -a $LOGF

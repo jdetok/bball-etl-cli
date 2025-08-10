@@ -12,6 +12,7 @@ PROJECT INTENT:
 		for a specific season
 
 - TODO:
+	- dev / prod as an argument
 	- custom etl
 	- eventually, define flags for different endpoints
 */
@@ -66,6 +67,7 @@ func main() {
 	}
 
 	// init database
+	// TODO - dev or prod connection based on flag
 	pg := pgresd.GetEnvPG()
 	pg.MakeConnStr()
 	db, err := pg.Conn()
