@@ -4,9 +4,15 @@
 - this repo is meant to replace this package and the repos that use it with a cli component, which should eliminate the need to have several repos
 
 ### run daily etl example
+##### from binary
+`./bin/cli -env prod -mode dly`
+##### from go source
 `go run ./cli -env prod -mode dly`
 
 ### run build etl example
+##### from binary
+`./bin/cli -env prod -mode bld`
+##### from go soruce
 `go run ./cli -env prod -mode bld`
 
 # CLI flags
