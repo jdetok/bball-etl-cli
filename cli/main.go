@@ -32,16 +32,6 @@ import (
 	"github.com/jdetok/golib/pgresd"
 )
 
-func EmailLog(l logd.Logger) error {
-	m := maild.MakeMail(
-		[]string{"jdekock17@gmail.com"},
-		"Go bball ETL log attached",
-		"the Go bball ETL process ran. The log is attached.",
-	)
-	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
-	return m.SendMIMEEmail(l.LogF)
-}
-
 type Params struct {
 	Mode [2]string // run mode e.g. build, daily, etc
 	Szn  [2]string // season selector, e.g. 2024 for 2024-25 NBA/2024 WNBA
@@ -252,4 +242,14 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func EmailLog(l logd.Logger) error {
+	m := maild.MakeMail(
+		[]string{"jdekock17@gmail.com"},
+		"Go bball ETL log attached",
+		"the Go bball ETL process ran. The log is attached.",
+	)
+	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
+	return m.SendMIMEEmail(l.LogF)
 }
