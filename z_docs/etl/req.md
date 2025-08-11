@@ -1,0 +1,2 @@
+## working game log request example:
+`{{baseURL}}/stats/leaguegamelog?LeagueID=10&Season=2025-26&SeasonType=Regular+Season&Counter=0&PlayerOrTeam=T&Sorter=DATE&DateFrom=07/24/2025&DateTo=07/24/2025&Direction=ASC`
