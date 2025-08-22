@@ -54,6 +54,16 @@ func parseArgs() Params {
 	return p
 }
 
+func EmailLog(l logd.Logger) error {
+	m := maild.MakeMail(
+		[]string{"jdekock17@gmail.com"},
+		"Go bball ETL log attached",
+		"the Go bball ETL process ran. The log is attached.",
+	)
+	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
+	return m.SendMIMEEmail(l.LogF)
+}
+
 func main() {
 	// configs
 	e := errd.InitErr()
@@ -242,14 +252,5 @@ func main() {
 		os.Exit(1)
 	}
 
-}
-
-func EmailLog(l logd.Logger) error {
-	m := maild.MakeMail(
-		[]string{"jdekock17@gmail.com"},
-		"Go bball ETL log attached",
-		"the Go bball ETL process ran. The log is attached.",
-	)
-	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
-	return m.SendMIMEEmail(l.LogF)
+	cnf.L.WriteLog("email sent - exiting bball-etl-cli")
 }
