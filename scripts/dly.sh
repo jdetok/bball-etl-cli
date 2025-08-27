@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 
+# add go binary to path
+export PATH=$PATH:/usr/local/go/bin
+
 # DAILY SCRIPT TO UPDATE DATABASE WITH NEW GAMES. RUNS CLI IN "daily" MODE
 DIR=/home/jdeto/go/github.com/jdetok/bball-etl-cli
 LOGD=$DIR/z_log_d
 # cd into this dir
 cd $DIR
 
-# run nightly etl
-export PATH=$PATH:/usr/local/go/bin
+# TODO: create log file to pick up in go app
+
 
 # RUN CLI PROCESS IN DAILY MODE
 ./bin/cliv2 -env prod -mode daily
