@@ -32,14 +32,14 @@ import (
 	"github.com/jdetok/golib/pgresd"
 )
 
-func EmailLog(l logd.Logger) error {
+func EmailLog(logf string) error {
 	m := maild.MakeMail(
 		[]string{"jdekock17@gmail.com"},
 		"Go bball ETL log attached",
 		"the Go bball ETL process ran. The log is attached.",
 	)
-	l.WriteLog(fmt.Sprintf("attempting to email %s to %s", l.LogF, m.MlTo[0]))
-	return m.SendMIMEEmail(l.LogF)
+	// l.WriteLog(fmt.Sprintf("attempting to email %s to %s", logf, m.MlTo[0]))
+	return m.SendMIMEEmail(logf)
 }
 
 func main() {
@@ -81,7 +81,6 @@ func main() {
 	cnf.DB = db
 	cnf.RowCnt = 0
 
-	fmt.Println("DEBUG db connected")
 	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
 	switch p.Mode[1] {
 	case "": // no mode passed,
@@ -204,8 +203,26 @@ func main() {
 				p.Szn[1], p.Lg[1], cnf.RowCnt,
 			)
 		}
-
-		// NO ARGS PASSED - ERROR OUT
+		// EMAIL MODE: RUN AT END OF SH
+	case "email":
+		// email log file to myself
+		switch p.Logf[1] {
+		case "":
+			e.Msg = "must pass a log file when run in email mode"
+			fmt.Println(e.NewErr())
+			os.Exit(1)
+		default:
+			EmailLog(p.Logf[1])
+			if err != nil {
+				e.Msg = "error emailing log"
+				// cnf.L.WriteLog(e.Msg)
+				fmt.Println(e.BuildErr(err))
+				os.Exit(1)
+			}
+			os.Exit(0) // exit early
+		}
+		
+	// NO ARGS PASSED - ERROR OUT
 	default:
 		e.Msg = fmt.Sprintf(
 			"invalid mode: '%s' is not an option", p.Mode[1])
@@ -235,14 +252,14 @@ func main() {
 		),
 	)
 
-	// email log file to myself
-	EmailLog(cnf.L)
-	if err != nil {
-		e.Msg = "error emailing log"
-		cnf.L.WriteLog(e.Msg)
-		fmt.Println(e.BuildErr(err))
-		os.Exit(1)
-	}
+	// // email log file to myself
+	// EmailLog(cnf.L)
+	// if err != nil {
+	// 	e.Msg = "error emailing log"
+	// 	cnf.L.WriteLog(e.Msg)
+	// 	fmt.Println(e.BuildErr(err))
+	// 	os.Exit(1)
+	// }
 
-	cnf.L.WriteLog("email sent - exiting bball-etl-cli")
+	// cnf.L.WriteLog("email sent - exiting bball-etl-cli")
 }

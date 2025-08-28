@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 
-# add go binary to path
-export PATH=$PATH:/usr/local/go/bin
-
-# DAILY SCRIPT TO UPDATE DATABASE WITH NEW GAMES. RUNS CLI IN "daily" MODE
+# RUN BBALL ETL CLI IN "daily" MODE - UPDATE DB WITH NEW GAME FROM PREV DAY
 DIR=/home/jdeto/go/github.com/jdetok/bball-etl-cli
-# LOGD=$DIR/z_log_d
 LOGD=z_log_d
 LOGF=$LOGD/dly_etl_$(date +'%m%d%y_%H%M%S').log
+ETL=bin/cli
+PG_DKR=pgbball
+PG_DB=bball
+PROC=scripts/dly.sql
+
+# add go binary to path
+export PATH=$PATH:/usr/local/go/bin
 
 # cd into this dir
 cd $DIR
 
 # create log file 
-# touch $LOGF
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ++ DAILY BBALL ETL STARTED
 ++ $(date)
@@ -25,8 +27,7 @@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 " >> $LOGF
 
 # RUN CLI PROCESS IN DAILY MODE, PASS LOG FILE
-./bin/logf_test -env prod -mode daily -logf $LOGF
-# ./bin/cliv2 -env prod -mode daily
+./$ETL -env prod -mode daily -logf $LOGF
 
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ++ GO ETL CLI APPLICATION RAN SUCCESSFULLY
@@ -34,10 +35,8 @@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ++ ATTEMPTING NIGHTLY POSTGRES PROCEDURES TO UPDATE API TABLES
 " >> $LOGF
 
-# echo "attempting to run sp_nightly_call() from call.sql at $(date)..." | tee -a $LOGF
 # call procedures: change container name as needed
-docker exec -i pgbball psql -U postgres -d bball < ./scripts/dly.sql 2>&1 | tee -a $LOGF
-# docker exec -i devpg psql -U postgres -d bball < ./call.sql
+docker exec -i $PG_DKR psql -U postgres -d $PG_DB < ./$PROC 2>&1 | tee -a $LOGF
 
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ++ POSTGRES PROCEDURES COMPLETE
@@ -45,6 +44,13 @@ echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 " >> $LOGF
 
 echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-++ DAILY BBALL ETL COMPLETE
+++ DAILY BBALL ETL COMPLETE - ATTEMPTING TO EMAIL LOG
 ++ $(date)
 " >> $LOGF
+
+# email log
+./$ETL -mode email -logf $LOGF
+
+echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++ EMAIL SENT - SCRIPT COMPLETE
+++ $(date)" >> $LOGF
