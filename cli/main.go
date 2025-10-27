@@ -20,30 +20,16 @@ PROJECT INTENT:
 package main
 
 import (
-	// "flag"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/etl"
 	"github.com/jdetok/golib/errd"
-	"github.com/jdetok/golib/logd"
-	"github.com/jdetok/golib/maild"
 	"github.com/jdetok/golib/pgresd"
 )
 
-func EmailLog(logf string) error {
-	m := maild.MakeMail(
-		[]string{"jdekock17@gmail.com"},
-		"Go bball ETL log attached",
-		"the Go bball ETL process ran. The log is attached.",
-	)
-	// l.WriteLog(fmt.Sprintf("attempting to email %s to %s", logf, m.MlTo[0]))
-	return m.SendMIMEEmail(logf)
-}
-
 func main() {
-	// configs
 	e := errd.InitErr()
 	var sTime time.Time = time.Now()
 	var cnf etl.Conf
@@ -53,181 +39,87 @@ func main() {
 	runArgs := os.Args
 	if len(runArgs) == 1 {
 		e.Msg = "an argument must be passed"
-		fmt.Println(e.NewErr())
-		os.Exit(1)
+		e.Fatal(e.NewErr())
 	}
 
 	// parse flags
-	var p Params = parseArgs()
+	args := parseArgs()
 
-	// init database based on -dev flag
+	// init database based on -env flag
 	var pg pgresd.PostGres
-	switch p.Env[1] {
-	case "dev":
-		pg = pgresd.GetEnvFilePG("./.envdev")
-	case "test":
-		pg = pgresd.GetEnvFilePG("./.envtst")
-	case "prod":
-		pg = pgresd.GetEnvPG() // reads .env
+	db, envErr := args.SetEnv(&pg)
+	if envErr != nil {
+		e.Msg = "failed to setup the environment"
+		e.Fatal(envErr)
 	}
-	pg.MakeConnStr()
-	db, err := pg.Conn()
-	if err != nil {
-		fmt.Println(e.BuildErr(err))
-		os.Exit(1)
-	}
-	db.SetMaxOpenConns(40)
-	db.SetMaxIdleConns(40)
+
+	// set etl.cnf database values
 	cnf.DB = db
 	cnf.RowCnt = 0
 
 	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
-	switch p.Mode[1] {
+	switch args.Mode[1] {
 	case "": // no mode passed,
 		e.Msg = "a mode must be specified"
-		fmt.Println(e.NewErr())
-		os.Exit(1)
+		e.Fatal(e.NewErr())
 
 	// daily etl: etl for previous day's games
-	case "daily": 
-		switch p.Logf[1] { // init logger based on if user passed -logf flag
-		case "": // no flag
-			// initialize logger and create log file
-			l, err := logd.InitLogger("z_log_d", "dly_etl")
-			if err != nil {
-				e.Msg = "error initializing logger"
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
-			}
-			cnf.L = l // assign to cnf
-		default: // passed a logf
-			// initialize logger and create log file
-			// pass dir and file in same string
-			l, err := logd.InitLogf(p.Logf[1])
-			if err != nil {
-				e.Msg = "error initializing logger"
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
-			}
-			cnf.L = l // assign to cnf
+	case "daily":
+		dlyCmpl, dlyErr := args.SetupDailyETL(&cnf, &e)
+		if dlyErr != nil {
+			e.Msg = dlyCmpl
+			e.Fatal(dlyErr)
 		}
-	
-		// RUN NIGHTLY ETL
-		if err = etl.RunNightlyETL(cnf); err != nil {
-			e.Msg = fmt.Sprintf(
-				"error with %v daily etl", etl.Yesterday(time.Now()))
-			cnf.L.WriteLog(e.Msg)
-			fmt.Println(e.BuildErr(err))
-			os.Exit(1)
-		}
-		compMsg = fmt.Sprintf( // assign in switch
-			"\n---- daily etl for %v complete | total rows affected: %d",
-			etl.Yesterday(time.Now()), cnf.RowCnt,
-		)
 
 		// build etl: all seasons 1970 through current
 	case "build":
-		l, err := logd.InitLogger("z_log_bld", "bld_etl")
-		if err != nil {
-			e.Msg = "error initializing logger"
-			fmt.Println(e.BuildErr(err))
-			os.Exit(1)
+		bldCmpl, bldErr := args.SetupBuildETL(&cnf, "1970", "current")
+		if bldErr != nil {
+			e.Msg = bldCmpl
+			e.Fatal(bldErr)
 		}
-		cnf.L = l // assign to cnf
-
-		// SET START AND END SEASONS
-		var st string = "1970"
-		var en string = time.Now().Format("2006") // current year
-
-		// RUN ETL
-		if err = etl.RunSeasonETL(cnf, st, en); err != nil {
-			e.Msg = fmt.Sprintf(
-				"error running season etl: start year: %s | end year: %s", st, en)
-			cnf.L.WriteLog(e.Msg)
-			fmt.Println(e.BuildErr(err))
-			os.Exit(1)
-		}
-		compMsg = fmt.Sprintf(
-			"\n---- etl for seasons between %s and %s | total rows affected: %d",
-			st, en, cnf.RowCnt,
-		)
+		fmt.Println(bldCmpl)
 
 		// "custom" run - a season MUST be specified, lg defaults to both
 	case "custom":
 		// exit if no season passed
-		if p.Szn[1] == "" {
+		if args.Szn[1] == "" {
 			e.Msg = "a season (-szn) must be specified in custom mode"
-			fmt.Println(e.NewErr())
-			os.Exit(1)
+			e.Fatal(e.NewErr())
 		}
 		// switch on lg to determine whether to do both leagues or just one
-		switch p.Lg[1] {
+		switch args.Lg[1] {
 		case "":
-			l, err := logd.InitLogger("z_log",
-				fmt.Sprintf("szn_etl_%s", p.Szn[1]))
-			if err != nil {
-				e.Msg = "error initializing logger"
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
+			bCmpl, bErr := args.CustomBothLgETL(&cnf)
+			if bErr != nil {
+				e.Msg = bCmpl
+				e.Fatal(bErr)
 			}
-			cnf.L = l // assign to cnf
-
-			// RUN FOR BOTH NBA AND WNBA
-			if err := etl.GLogSeasonETL(&cnf, p.Szn[1]); err != nil {
-				e.Msg = fmt.Sprintf("error running etl for %s season", p.Szn[1])
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
-			}
-			compMsg = fmt.Sprintf(
-				"\n---- etl for %s nba/wnba seasons | total rows affected: %d",
-				p.Szn[1], cnf.RowCnt,
-			)
 		case "nba", "wnba":
-			l, err := logd.InitLogger("z_log",
-				fmt.Sprintf("szn_etl_%s_%s", p.Lg[1], p.Szn[1]))
-			if err != nil {
-				e.Msg = "error initializing logger"
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
+			lgCmpl, lgErr := args.CustomLgETL(&cnf)
+			if lgErr != nil {
+				e.Msg = lgCmpl
+				e.Fatal(lgErr)
 			}
-			cnf.L = l // assign to cnf
-			// TODO: specific season fetch
-			if err := etl.LgSznGlogs(&cnf, p.Lg[1], p.Szn[1]); err != nil {
-				e.Msg = fmt.Sprintf("error running etl for %s %s season",
-					p.Szn[1], p.Lg[1])
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
-			}
-			compMsg = fmt.Sprintf(
-				"\n---- etl for %s %s seasons | total rows affected: %d",
-				p.Szn[1], p.Lg[1], cnf.RowCnt,
-			)
 		}
-		// EMAIL MODE: RUN AT END OF SH
+	// EMAIL MODE: RUN AT END OF SH. must pas a log file
 	case "email":
-		// email log file to myself
-		switch p.Logf[1] {
+		switch args.Logf[1] {
 		case "":
 			e.Msg = "must pass a log file when run in email mode"
-			fmt.Println(e.NewErr())
-			os.Exit(1)
+			e.Fatal(e.NewErr())
 		default:
-			EmailLog(p.Logf[1])
-			if err != nil {
+			if err := EmailLog(args.Logf[1]); err != nil {
 				e.Msg = "error emailing log"
-				// cnf.L.WriteLog(e.Msg)
-				fmt.Println(e.BuildErr(err))
-				os.Exit(1)
+				e.Fatal(err)
 			}
-			os.Exit(0) // exit early
 		}
-		
+
 	// NO ARGS PASSED - ERROR OUT
 	default:
 		e.Msg = fmt.Sprintf(
-			"invalid mode: '%s' is not an option", p.Mode[1])
-		fmt.Println(e.NewErr())
-		os.Exit(1)
+			"invalid mode: '%s' is not an option", args.Mode[1])
+		e.Fatal(e.NewErr())
 	}
 
 	// write errors to the log
@@ -251,15 +143,4 @@ func main() {
 			compMsg, // assigned in switch based on passed mode
 		),
 	)
-
-	// // email log file to myself
-	// EmailLog(cnf.L)
-	// if err != nil {
-	// 	e.Msg = "error emailing log"
-	// 	cnf.L.WriteLog(e.Msg)
-	// 	fmt.Println(e.BuildErr(err))
-	// 	os.Exit(1)
-	// }
-
-	// cnf.L.WriteLog("email sent - exiting bball-etl-cli")
 }

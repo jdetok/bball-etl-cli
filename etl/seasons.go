@@ -19,6 +19,7 @@ func Yesterday(dt time.Time) string {
 	return dt.Add(-24 * time.Hour).Format("01/02/2006")
 }
 
+// pass start/end years as strings (MUST be 4 digit integer YYYY 2025 format)
 func SznBSlice(l logd.Logger, start, end string) ([]string, error) {
 	e := errd.InitErr()
 	startYr, errS := strconv.Atoi(start)

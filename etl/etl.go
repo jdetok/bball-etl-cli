@@ -38,9 +38,11 @@ func RunNightlyETL(cnf Conf) error {
 	return nil
 }
 
+// HIGH LEVEL SEASON ETL CALL - fetch & insert ALL data for each season from start - end
 func RunSeasonETL(cnf Conf, startY, endY string) error {
 	e := errd.InitErr()
 
+	// return formatted slice of seasons from startY, endY | "2025-26" format
 	szns, err := SznBSlice(cnf.L, startY, endY)
 	if err != nil {
 		e.Msg = "error making seasons string"
@@ -48,6 +50,8 @@ func RunSeasonETL(cnf Conf, startY, endY string) error {
 		log.Fatal(e.BuildErr(err))
 	}
 
+	// iterate through each season
+	// convert to concurrent
 	for _, s := range szns {
 		sra := cnf.RowCnt // capture row count at start of each season
 		stT := time.Now()

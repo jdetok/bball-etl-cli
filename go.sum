@@ -6,6 +6,8 @@ github.com/jdetok/golib v0.0.0-20250827225117-032e1a7efde1 h1:V3r8G3oyWRvyqVcCCf
 github.com/jdetok/golib v0.0.0-20250827225117-032e1a7efde1/go.mod h1:n/TzNVPIaLhbXKE82pIIesDXgoPMi4Nc0c7z7vi6UpQ=
 github.com/jdetok/golib v0.0.0-20250827231049-705d3a87dfaa h1:AjeRbK272mS0ZXcEmQRilzDdPslC12u0qdRc/Tnx7Vc=
 github.com/jdetok/golib v0.0.0-20250827231049-705d3a87dfaa/go.mod h1:n/TzNVPIaLhbXKE82pIIesDXgoPMi4Nc0c7z7vi6UpQ=
+github.com/jdetok/golib v0.0.0-20251027160731-6a2371e41592 h1:Qr9rBCiCZCszZBmj7Ij+AzQPJ6QrQg8a6ipyHjW7bHY=
+github.com/jdetok/golib v0.0.0-20251027160731-6a2371e41592/go.mod h1:n/TzNVPIaLhbXKE82pIIesDXgoPMi4Nc0c7z7vi6UpQ=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
