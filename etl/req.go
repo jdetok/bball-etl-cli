@@ -1,11 +1,7 @@
 package etl
 
 import (
-	"fmt"
 	"net/http"
-
-	"github.com/jdetok/golib/errd"
-	"github.com/jdetok/golib/logd"
 )
 
 // build GetReq types to request data from new endpoints
@@ -29,28 +25,6 @@ makeQryStr to loop through gr.Params & make query string
 func (gr *GetReq) MakeFulLURL() string {
 	bUrl := gr.endptURL()
 	return gr.makeQryStr(bUrl)
-}
-
-/*
-make new request with url returned from MakeFullURL
-add gr.Headers to req with addHdrs
-use RespFromClient to do the http req, return the resp body []byte
-*/
-func (gr *GetReq) BodyFromReq(l logd.Logger) ([]byte, error) {
-	e := errd.InitErr()
-	req, err := http.NewRequest(http.MethodGet, gr.MakeFulLURL(), nil)
-	if err != nil {
-		e.Msg = fmt.Sprintf("error calling %s", gr.MakeFulLURL())
-		l.WriteLog(e.Msg)
-		return nil, e.BuildErr(err)
-
-	}
-	gr.addHdrs(req)
-	body, err := RespFromClient(l, req)
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
 }
 
 // concat endpoint to host
