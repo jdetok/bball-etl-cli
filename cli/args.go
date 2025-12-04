@@ -132,9 +132,10 @@ func (args *Args) SetupBuildETL(cnf *etl.Conf, st, en string) (string, error) {
 		en = time.Now().Format("2006")
 	}
 
+	// run concurrent build etl
 	if args.CC[1] == "true" {
-		// CALL NEW CONCURRENT FUNCTION
-		return "concurrent on", nil
+		var cc = etl.MakeConcurETL(cnf, 10)
+		return cc.CCBuildModeETL(st, en)
 	}
 
 	// pass seasons to RunSeasonETL

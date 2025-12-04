@@ -73,16 +73,17 @@ func RespFromClient(l logd.Logger, req *http.Request) ([]byte, error) {
 	baseDelay := (5 * time.Second)
 
 	for attempt := 0; attempt <= retries; attempt++ {
+		curDel := baseDelay << attempt
 		clnReq := req.Clone(req.Context())
 		res, err := http.DefaultClient.Do(clnReq)
 		if err != nil {
 			// RETRY REQUEST IF < RETRIES
 			if attempt < retries {
 				e.Msg = fmt.Sprintf(
-					"HTTP client error (attempt %d/%d): %v - retrying",
-					attempt+1, retries+1, err)
+					"HTTP client error (attempt %d/%d): %v - retrying after %v seconds",
+					attempt+1, retries+1, err, curDel)
 				l.WriteLog(e.Msg)
-				time.Sleep(baseDelay << attempt) // exponential backoff
+				time.Sleep(curDel) // exponential backoff
 				continue
 			}
 			e.Msg = "*500 - HTTP client error occurred, no response received"

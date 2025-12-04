@@ -59,8 +59,7 @@ func RunSeasonETL(cnf Conf, startY, endY string) error {
 		// players etl for season
 		if err := SznPlayersETL(cnf, "1", s); err != nil {
 			e.Msg = fmt.Sprint("error getting players for ", s)
-			cnf.L.WriteLog(e.Msg)
-			fmt.Println(e.BuildErr(err))
+			return e.NewErr()
 		}
 
 		// get team and player game logs for the season

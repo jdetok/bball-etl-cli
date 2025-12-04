@@ -40,6 +40,7 @@ create table lg.szn (
 create index idx_sznt on lg.szn(sznt_id);
 create index idx_szn on lg.szn(szn);
 create index idx_wszn on lg.szn(wszn);
+create index idx_szn_no_prefix on lg.szn(substr(szn_id::text, 2, 4)); 
 
 -- insert aggregate seasons for api stats tables
 insert into lg.szn values
