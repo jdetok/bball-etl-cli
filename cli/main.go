@@ -62,13 +62,19 @@ func main() {
 
 	// init database based on -dev flag
 	var pg pgresd.PostGres
-	switch p.Env[1] {
-	case "dev":
-		pg = pgresd.GetEnvFilePG("./.envdev")
-	case "test":
-		pg = pgresd.GetEnvFilePG("./.envtst")
-	case "prod":
-		pg = pgresd.GetEnvPG() // reads .env
+	if p.EnvFile[1] != "" {
+		pg = pgresd.GetEnvFilePG(p.EnvFile[1])
+		fmt.Println("recognized .env file passed as arg")
+	} else {
+
+		switch p.Env[1] {
+		case "dev":
+			pg = pgresd.GetEnvFilePG("./.envdev")
+		case "test":
+			pg = pgresd.GetEnvFilePG("./.envtst")
+		case "prod":
+			pg = pgresd.GetEnvPG() // reads .env
+		}
 	}
 	pg.MakeConnStr()
 	db, err := pg.Conn()
@@ -89,7 +95,7 @@ func main() {
 		os.Exit(1)
 
 	// daily etl: etl for previous day's games
-	case "daily": 
+	case "daily":
 		switch p.Logf[1] { // init logger based on if user passed -logf flag
 		case "": // no flag
 			// initialize logger and create log file
@@ -111,7 +117,7 @@ func main() {
 			}
 			cnf.L = l // assign to cnf
 		}
-	
+
 		// RUN NIGHTLY ETL
 		if err = etl.RunNightlyETL(cnf); err != nil {
 			e.Msg = fmt.Sprintf(
@@ -221,7 +227,7 @@ func main() {
 			}
 			os.Exit(0) // exit early
 		}
-		
+
 	// NO ARGS PASSED - ERROR OUT
 	default:
 		e.Msg = fmt.Sprintf(
