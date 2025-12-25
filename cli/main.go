@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/etl"
+	"github.com/jdetok/golib/envd"
 	"github.com/jdetok/golib/errd"
 	"github.com/jdetok/golib/logd"
 	"github.com/jdetok/golib/maild"
@@ -62,11 +63,15 @@ func main() {
 
 	// init database based on -dev flag
 	var pg pgresd.PostGres
-	if p.EnvFile[1] != "" {
-		pg = pgresd.GetEnvFilePG(p.EnvFile[1])
-		fmt.Println("recognized .env file passed as arg")
-	} else {
 
+	switch p.EnvFile[1] {
+	case "skip":
+		pg.Host = envd.EnvStr("PG_HOST")
+		pg.Port = envd.EnvInt("PG_PORT")
+		pg.User = envd.EnvStr("PG_USER")
+		pg.Password = envd.EnvStr("PG_PASS")
+		pg.Database = envd.EnvStr("PG_DB")
+	case "":
 		switch p.Env[1] {
 		case "dev":
 			pg = pgresd.GetEnvFilePG("./.envdev")
@@ -75,7 +80,11 @@ func main() {
 		case "prod":
 			pg = pgresd.GetEnvPG() // reads .env
 		}
+	default:
+		pg = pgresd.GetEnvFilePG(p.EnvFile[1])
+		fmt.Println("recognized .env file passed as arg")
 	}
+
 	pg.MakeConnStr()
 	db, err := pg.Conn()
 	if err != nil {
