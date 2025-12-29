@@ -121,7 +121,7 @@ func main() {
 			app.Cnf.Lg.Fatalf("error with %v daily etl", etl.Yesterday(time.Now()))
 		}
 		app.CmplMsg = fmt.Sprintf( // assign in switch
-			"\n---- daily etl for %v complete | total rows affected: %d",
+			"++ daily etl for %v complete | total rows affected: %d\n",
 			etl.Yesterday(time.Now()), app.Cnf.RowCnt,
 		)
 		// build etl: all seasons 1970 through current
@@ -135,7 +135,7 @@ func main() {
 			app.Cnf.Lg.Fatalf("error running season etl: start year: %s | end year: %s", st, en)
 		}
 		app.CmplMsg = fmt.Sprintf(
-			"\n---- etl for seasons between %s and %s | total rows affected: %d",
+			"++ etl for seasons between %s and %s | total rows affected: %d\n",
 			st, en, app.Cnf.RowCnt,
 		)
 
@@ -153,7 +153,7 @@ func main() {
 				app.Cnf.Lg.Fatalf("error running etl for %s season", p.Szn[1])
 			}
 			app.CmplMsg = fmt.Sprintf(
-				"\n---- etl for %s nba/wnba seasons | total rows affected: %d",
+				"++ etl for %s nba/wnba seasons | total rows affected: %d\n",
 				p.Szn[1], app.Cnf.RowCnt,
 			)
 		case "nba", "wnba":
@@ -163,7 +163,7 @@ func main() {
 					p.Szn[1], p.Lg[1])
 			}
 			app.CmplMsg = fmt.Sprintf(
-				"\n---- etl for %s %s seasons | total rows affected: %d",
+				"++ etl for %s %s seasons | total rows affected: %d\n",
 				p.Szn[1], p.Lg[1], app.Cnf.RowCnt,
 			)
 		}
