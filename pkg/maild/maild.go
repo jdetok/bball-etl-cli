@@ -6,8 +6,6 @@ import (
 	"net/smtp"
 	"os"
 	"strings"
-
-	"github.com/jdetok/golib/envd"
 )
 
 type MIMEEmail struct {
@@ -85,22 +83,6 @@ func NewMIMEEmail(a *EmailAuth, to []string, file, subj, body string) *MIMEEmail
 		Addr: fmt.Sprint(a.Host, ":", a.Port),
 		Auth: smtp.PlainAuth("", a.User, a.Pass, a.Host),
 	}
-}
-
-// constructor
-func MakeMail(mailTo []string, subject, body string) MIMEEmail {
-	var m MIMEEmail
-	envd.LoadDotEnv()
-	m.User = envd.EnvStr("GMAIL_SNDR")
-	m.Pass = envd.EnvStr("GMAIL_PASS")
-	m.Host = envd.EnvStr("GMAIL_HOST")
-	m.Port = envd.EnvStr("GMAIL_PORT")
-	m.MlTo = mailTo
-	m.Addr = fmt.Sprint(m.Host, ":", m.Port)
-	m.Subj = subject
-	m.Body = body
-	m.Auth = smtp.PlainAuth("", m.User, m.Pass, m.Host)
-	return m
 }
 
 func (m *MIMEEmail) MakeMIMEMsg(fName string) error {

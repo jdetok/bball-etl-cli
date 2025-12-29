@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/jdetok/golib/errd"
 )
 
 type InsertStmnt struct {
@@ -92,7 +90,6 @@ func (ins *InsertStmnt) ChunkVals() {
 
 // loop through the chunks & attempt to insert all rows from each one
 func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
-	e := errd.InitErr()
 	var wg sync.WaitGroup
 	// var g errgroup.errgroup
 	var mu sync.Mutex
@@ -106,8 +103,7 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 			cnf.Lg.Infof("starting chunk %d/%d - %v", i+1, len(ins.Chunks), st)
 			res, err := cnf.DB.Exec(ins.BuildStmnt(c), ValsFromSet(c)...)
 			if err != nil {
-				e.Msg = fmt.Sprintf("error inserting chunk %d/%d", i+1, len(ins.Chunks))
-				errCh <- e.BuildErr(err)
+				errCh <- fmt.Errorf("error inserting chunk %d/%d: %v", i+1, len(ins.Chunks), err)
 				return
 			}
 			ra, _ := res.RowsAffected()
@@ -127,20 +123,17 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 	close(errCh)
 	if len(errCh) > 0 {
 		err := <-errCh
-		e.Msg = "one or more chunks failed to insert"
-		return e.BuildErr(err)
+		return fmt.Errorf("one or more chunks failed to insert: %v", err)
 	}
 	return nil
 }
 
 // loop through the chunks & attempt to insert all rows from each one
 func (ins *InsertStmnt) Insert(cnf *Conf) error {
-	e := errd.InitErr()
 	for i, c := range ins.Chunks {
 		res, err := cnf.DB.Exec(ins.BuildStmnt(c), ValsFromSet(c)...)
 		if err != nil {
-			e.Msg = fmt.Sprintf("error inserting chunk %d/%d", i+1, len(ins.Chunks))
-			return e.BuildErr(err)
+			return fmt.Errorf("error inserting chunk %d/%d: %v", i+1, len(ins.Chunks), err)
 		}
 		ra, _ := res.RowsAffected()
 		cnf.RowCnt += ra // add rows affected to total
