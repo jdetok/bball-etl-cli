@@ -3,9 +3,6 @@ package etl
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/jdetok/golib/errd"
-	"github.com/jdetok/golib/logd"
 )
 
 // calls scheduleleaguev2 endpoint for schedule start/end dates
@@ -36,20 +33,16 @@ func SchedReq(league, season string) GetReq {
 	return gr
 }
 
-func RequestSchedule(l logd.Logger, gr GetReq) error {
-	e := errd.InitErr()
+func RequestSchedule(gr GetReq) error {
 	fmt.Printf("requesting data from %s...\n", gr.Endpoint)
-	body, err := gr.BodyFromReq(l)
+	body, err := gr.BodyFromReq()
 	if err != nil {
-		e.Msg = "error getting schedule response"
-		return e.BuildErr(err)
+		return fmt.Errorf("error getting schedule response: %v", err)
 	}
 
 	var resp RespSched
 	if err := json.Unmarshal(body, &resp); err != nil {
-		e.Msg = "error unmarshaling schedule response"
-		fmt.Println(err)
-		return e.BuildErr(err)
+		return fmt.Errorf("error unmarshaling schedule response: %v", err)
 	}
 
 	fmt.Println(resp.Dates)

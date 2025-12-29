@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/jdetok/golib/errd"
-	"github.com/jdetok/golib/logd"
 )
 
 type Resp struct {
@@ -24,49 +21,42 @@ type ResultSet struct {
 }
 
 // pass a defined GetReq struct, unmarshals body & returns as Resp struct
-func RequestResp(l logd.Logger, gr GetReq) (Resp, error) {
-	e := errd.InitErr()
+func RequestResp(gr GetReq) (*Resp, error) {
 	var resp Resp
-	body, err := gr.BodyFromReq(l)
+	body, err := gr.BodyFromReq()
 	if err != nil {
-		e.Msg = fmt.Sprintf("error getting response for %s", gr.Endpoint)
-		l.WriteLog(e.Msg)
-		return resp, e.BuildErr(err)
+		return nil, err
 	}
 	resp, err = UnmarshalInto(body)
 	if err != nil {
-		return resp, fmt.Errorf("error unmarshaling: %e", err)
+		return &resp, fmt.Errorf("error unmarshaling: %e", err)
 	}
-	return resp, nil
+	return &resp, nil
 }
 
 /*
 use http client to perform http request
 get & return body as []byte
 */
-func RespFromClient(l logd.Logger, req *http.Request) ([]byte, error) {
-	e := errd.InitErr()
+func RespFromClient(req *http.Request) ([]byte, error) {
+	var errMsg string
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if res != nil {
 			if res.StatusCode == 429 {
-				e.Msg = fmt.Sprint(res.StatusCode, "- timeout error")
+				errMsg = fmt.Sprint(res.StatusCode, "- timeout error")
 			} else {
-				e.Msg = fmt.Sprint(res.StatusCode, "- HTTP client error occured")
+				errMsg = fmt.Sprint(res.StatusCode, "- HTTP client error occured")
 			}
-			l.WriteLog(e.Msg)
-			return nil, e.BuildErr(err)
 		}
-		e.Msg = "*500 - HTTP client error occured, no response received"
-		return nil, e.NewErr()
+		errMsg = "*500 - HTTP client error occured, no response received"
+		return nil, fmt.Errorf("%s: %v", errMsg, err)
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		e.Msg = fmt.Sprint(res.StatusCode, "- error reading response body")
-		l.WriteLog(e.Msg)
-		return nil, e.BuildErr(err)
+		return nil, fmt.Errorf("%d error reading response body: %v", res.StatusCode, err)
 	}
 	return body, nil
 }

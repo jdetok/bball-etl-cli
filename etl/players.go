@@ -2,8 +2,6 @@ package etl
 
 import (
 	"fmt"
-
-	"github.com/jdetok/golib/errd"
 )
 
 func PlayerReq(onlyCurrent, league, season string) GetReq {
@@ -38,13 +36,10 @@ func PlayersParams() LgTbls {
 
 // SAME AS CURRENT PLAYER ETL BUT FOR INDIVIDUAL SEASON
 // WILL NEED A NEW GET SEASONS FUNCTION AS WELL
-func SznPlayersETL(cnf Conf, onlyCurrent, season string) error {
-	e := errd.InitErr()
+func SznPlayersETL(cnf *Conf, onlyCurrent, season string) error {
 	pp := PlayersParams()
+	cnf.Lg.Infof("attempting players ETL for %s nba/wnba seasons", season)
 
-	cnf.L.WriteLog(fmt.Sprintf(
-		"attempting players ETL for %s nba/wnba seasons",
-		season))
 	for i := range pp.lgs {
 		var lg string
 		switch pp.lgs[i] {
@@ -54,14 +49,12 @@ func SznPlayersETL(cnf Conf, onlyCurrent, season string) error {
 			lg = "wnba"
 		}
 
-		cnf.L.WriteLog(fmt.Sprintf("attempting to insert %s %s players", season, lg))
+		cnf.Lg.Infof(fmt.Sprintf("attempting to insert %s %s players", season, lg))
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
 		r := PlayerReq(onlyCurrent, pp.lgs[i], season)
-		resp, err := RequestResp(cnf.L, r)
+		resp, err := RequestResp(r)
 		if err != nil {
-			e.Msg = fmt.Sprintf("error getting response for %s: lg: %s szn: %s", r.Endpoint, lg, season)
-			cnf.L.WriteLog(e.Msg)
-			return e.BuildErr(err)
+			return fmt.Errorf("error getting response for %s: lg: %s szn: %s: %v", r.Endpoint, lg, season, err)
 		}
 
 		// get cols/rows from resp, return early when no rows in response
@@ -71,12 +64,10 @@ func SznPlayersETL(cnf Conf, onlyCurrent, season string) error {
 		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
-			cnf.L.WriteLog("response returned 0 rows, exiting")
+			cnf.Lg.Infof("response returned 0 rows, exiting")
 			return nil
 		}
-		cnf.L.WriteLog(
-			fmt.Sprintf("response returned %d fields & %d rows",
-				len(cols), len(rows)))
+		cnf.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 
 		// prepare the sql statement & chunks of values
 		ins := MakeInsert(
@@ -85,23 +76,21 @@ func SznPlayersETL(cnf Conf, onlyCurrent, season string) error {
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(&cnf)
+		ins.InsertFast(cnf)
 
-		cnf.L.WriteLog(fmt.Sprintf("%s %s players ETL complete", season, lg))
+		cnf.Lg.Infof("%s %s players ETL complete", season, lg)
 	}
-	cnf.L.WriteLog(fmt.Sprint("players ETL complete for ", season))
+	cnf.Lg.Infof("players ETL complete for ", season)
 	return nil
 }
 
-func CrntPlayersETL(cnf Conf) error {
-	e := errd.InitErr()
+func CrntPlayersETL(cnf *Conf) error {
 	sl := GetSeasons()
 	var szns = []string{sl.Szn, sl.WSzn}
 	pp := PlayersParams()
 
-	cnf.L.WriteLog(fmt.Sprintf(
-		"attempting current players ETL for %s nba season and %s wnba season",
-		sl.Szn, sl.WSzn))
+	cnf.Lg.Infof("attempting current players ETL for %s nba season and %s wnba season", sl.Szn, sl.WSzn)
+
 	for i := range pp.lgs {
 		var lg string
 		switch pp.lgs[i] {
@@ -111,14 +100,12 @@ func CrntPlayersETL(cnf Conf) error {
 			lg = "wnba"
 		}
 
-		cnf.L.WriteLog(fmt.Sprintf("attempting to insert current %s players", lg))
+		cnf.Lg.Infof("attempting to insert current %s players", lg)
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
 		r := PlayerReq("1", pp.lgs[i], szns[i])
-		resp, err := RequestResp(cnf.L, r)
+		resp, err := RequestResp(r)
 		if err != nil {
-			e.Msg = fmt.Sprintf("error getting response for %s", r.Endpoint)
-			cnf.L.WriteLog(e.Msg)
-			return e.BuildErr(err)
+			return fmt.Errorf("error getting response for %s: %v", r.Endpoint, err)
 		}
 
 		// get cols/rows from resp, return early when no rows in response
@@ -128,12 +115,10 @@ func CrntPlayersETL(cnf Conf) error {
 		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
-			cnf.L.WriteLog("response returned 0 rows, exiting")
+			cnf.Lg.Infof("response returned 0 rows, exiting")
 			return nil
 		}
-		cnf.L.WriteLog(
-			fmt.Sprintf("response returned %d fields & %d rows",
-				len(cols), len(rows)))
+		cnf.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 
 		// prepare the sql statement & chunks of values
 		ins := MakeInsert(
@@ -142,10 +127,10 @@ func CrntPlayersETL(cnf Conf) error {
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(&cnf)
+		ins.InsertFast(cnf)
 
-		cnf.L.WriteLog(fmt.Sprintf("current %s players ETL complete", lg))
+		cnf.Lg.Infof("current %s players ETL complete", lg)
 	}
-	cnf.L.WriteLog("current players ETL complete for all leagues")
+	cnf.Lg.Infof("current players ETL complete for all leagues")
 	return nil
 }

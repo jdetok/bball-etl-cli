@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/jdetok/golib/errd"
-	"github.com/jdetok/golib/logd"
 )
 
 type SeasonLeague struct {
@@ -19,16 +16,13 @@ func Yesterday(dt time.Time) string {
 	return dt.Add(-24 * time.Hour).Format("01/02/2006")
 }
 
-func SznBSlice(l logd.Logger, start, end string) ([]string, error) {
-	e := errd.InitErr()
+func SznBSlice(start, end string) ([]string, error) {
 	startYr, errS := strconv.Atoi(start)
 	endYr, errE := strconv.Atoi(end)
 	numY := endYr - startYr
 
 	if errS != nil || errE != nil {
-		e.Msg = "error converting start or end year to int"
-		l.WriteLog(e.Msg)
-		return nil, e.NewErr()
+		return nil, fmt.Errorf("error converting start or end year to int")
 	}
 
 	var szns []string
@@ -42,16 +36,13 @@ func SznBSlice(l logd.Logger, start, end string) ([]string, error) {
 	return szns, nil
 }
 
-func SznSlice(l logd.Logger, start, end string) ([]string, error) {
-	e := errd.InitErr()
+func SznSlice(start, end string) ([]string, error) {
 	startYr, errS := strconv.Atoi(start)
 	endYr, errE := strconv.Atoi(end)
 	numY := endYr - startYr
 
 	if errS != nil || errE != nil {
-		e.Msg = "error converting start or end year to int"
-		l.WriteLog(e.Msg)
-		return nil, e.NewErr()
+		return nil, fmt.Errorf("error converting start or end year to int")
 	}
 
 	var szns []string

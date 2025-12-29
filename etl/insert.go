@@ -94,6 +94,7 @@ func (ins *InsertStmnt) ChunkVals() {
 func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 	e := errd.InitErr()
 	var wg sync.WaitGroup
+	// var g errgroup.errgroup
 	var mu sync.Mutex
 	errCh := make(chan error, len(ins.Chunks))
 
@@ -102,9 +103,7 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 		go func(i int, c [][]any) {
 			defer wg.Done()
 			st := time.Now()
-			cnf.L.WriteLog(
-				fmt.Sprintf(
-					"starting chunk %d/%d - %v", i+1, len(ins.Chunks), st))
+			cnf.Lg.Infof("starting chunk %d/%d - %v", i+1, len(ins.Chunks), st)
 			res, err := cnf.DB.Exec(ins.BuildStmnt(c), ValsFromSet(c)...)
 			if err != nil {
 				e.Msg = fmt.Sprintf("error inserting chunk %d/%d", i+1, len(ins.Chunks))
@@ -114,23 +113,16 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 			ra, _ := res.RowsAffected()
 			mu.Lock()
 			cnf.RowCnt += ra // add rows affected to total
-			cnf.L.WriteLog(
-				fmt.Sprint(
-					fmt.Sprintf("chunk %d/%d complete | rowsets: %d | vals: %d\n",
-						i+1, len(ins.Chunks), len(c), len(ValsFromSet(c))),
-					fmt.Sprintln("- ", time.Now()),
-					fmt.Sprintln("- ", time.Since(st)),
-					fmt.Sprintf("-- %d new rows inserted into %s\n", ra, ins.Tbl),
-					fmt.Sprintln("-- total rows affected: ", cnf.RowCnt),
-				),
-			)
+			cnf.Lg.Infof(`
++ chunk %d/%d complete | rowsets: %d | vals: %d
+++ %d new rows inserted into %s
+++ %d total rows affected
+++ duration: %v
+`, i+1, len(ins.Chunks), len(c), len(ValsFromSet(c)), ra, ins.Tbl, cnf.RowCnt, time.Since(st))
 			mu.Unlock()
 			time.Sleep(1 * time.Second)
-
 		}(i, c)
-
 	}
-
 	wg.Wait()
 	close(errCh)
 	if len(errCh) > 0 {
@@ -138,7 +130,6 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 		e.Msg = "one or more chunks failed to insert"
 		return e.BuildErr(err)
 	}
-
 	return nil
 }
 
@@ -153,13 +144,9 @@ func (ins *InsertStmnt) Insert(cnf *Conf) error {
 		}
 		ra, _ := res.RowsAffected()
 		cnf.RowCnt += ra // add rows affected to total
-		cnf.L.WriteLog(
-			fmt.Sprint(
-				fmt.Sprintf(
-					"chunk %d/%d: rowsets: %d | vals: %d\n---- %d new rows inserted into %s",
-					i+1, len(ins.Chunks), len(c), len(ValsFromSet(c)), ra, ins.Tbl),
-				"\n---- total rows affected: ", cnf.RowCnt,
-			))
+		cnf.Lg.Infof(
+			"chunk %d/%d: rowsets: %d | vals: %d\n---- %d new rows inserted into %s\n---- total rows affected: %d",
+			i+1, len(ins.Chunks), len(c), len(ValsFromSet(c)), ra, ins.Tbl, cnf.RowCnt)
 	}
 	return nil
 }
