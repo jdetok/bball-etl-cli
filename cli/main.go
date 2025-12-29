@@ -31,21 +31,11 @@ const (
 )
 
 type App struct {
-	DBConf *pgdb.DBConfig
-	// EmailConf EmailCnf
+	DBConf    *pgdb.DBConfig
 	Cnf       *etl.Conf
 	CmplMsg   string
 	StartTime time.Time
 }
-
-// func EmailLog(logf string) error {
-// 	m := maild.MakeMail(
-// 		[]string{"jdekock17@gmail.com"},
-// 		"Go bball ETL log attached",
-// 		"the Go bball ETL process ran. The log is attached.",
-// 	)
-// 	return m.SendMIMEEmail(logf)
-// }
 
 func main() {
 	// parse flags
@@ -67,9 +57,10 @@ func main() {
 	var tmpLg io.Writer
 	var lgErr error
 	logf := p.Logf[1]
-	if logf == "" {
+	switch logf {
+	case "", "cli":
 		tmpLg, lgErr = logd.GetLogWriter(true, logf, "")
-	} else {
+	default:
 		tmpLg, lgErr = logd.GetLogWriter(false, logf, "010206_150405")
 	}
 	if lgErr != nil {
@@ -101,16 +92,17 @@ func main() {
 	runMode := p.Mode[1]
 	switch runMode {
 	case "email": // send log file in an email
-		if logf == "" {
-			app.Cnf.Lg.Fatalf("must pass a log file when run in email mode")
+		atch := p.Atch[1]
+		if atch == "" {
+			app.Cnf.Lg.Fatalf("must pass an attachment in email mode")
 		}
-		if _, err := os.Stat(logf); err != nil {
+		if _, err := os.Stat(atch); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				app.Cnf.Lg.Fatalf("fatal: file to attach not found at %s: %v", logf, err)
+				app.Cnf.Lg.Fatalf("fatal: file to attach not found at %s: %v", atch, err)
 			}
-			app.Cnf.Lg.Fatalf("fatal: error occured finding os.Stat(%s): %v", logf, err)
+			app.Cnf.Lg.Fatalf("fatal: error occured finding os.Stat(%s): %v", atch, err)
 		}
-		if err := maild.EmailLog(logf, GM_USERN, GM_PASSN, GM_HOSTN, GM_PORTN); err != nil {
+		if err := maild.EmailLog(atch, GM_USERN, GM_PASSN, GM_HOSTN, GM_PORTN); err != nil {
 			app.Cnf.Lg.Fatalf("error emailing log: %v", err)
 		}
 
