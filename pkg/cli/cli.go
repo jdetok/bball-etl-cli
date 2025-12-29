@@ -1,4 +1,4 @@
-package main
+package cli
 
 import "flag"
 
@@ -14,7 +14,7 @@ type Params struct {
 	Lg      [2]string // league selector, nba or wnba
 }
 
-func parseArgs() Params {
+func ParseArgs() Params {
 	var p = Params{
 		EnvFile: [2]string{"envf", ""},
 		Mode:    [2]string{"mode", ""},

@@ -7,8 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/jdetok/bball-etl-cli/etl"
+	"github.com/jdetok/bball-etl-cli/pkg/cli"
 	"github.com/jdetok/bball-etl-cli/pkg/conn"
+	"github.com/jdetok/bball-etl-cli/pkg/etl"
 	"github.com/jdetok/bball-etl-cli/pkg/logd"
 	"github.com/jdetok/bball-etl-cli/pkg/maild"
 	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
@@ -39,7 +40,7 @@ type App struct {
 
 func main() {
 	// parse flags
-	var p Params = parseArgs() // get args passed - exit if 1 will be at least 2 if arg was passed
+	var p cli.Params = cli.ParseArgs() // get args passed - exit if 1 will be at least 2 if arg was passed
 	runArgs := os.Args
 	if len(runArgs) == 1 {
 		fmt.Println("fatal: an argument must be passed")
