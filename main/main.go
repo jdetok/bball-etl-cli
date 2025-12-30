@@ -53,6 +53,21 @@ func main() {
 		DBConf:    pgdb.NewDBConf(PG_OPEN, PG_IDLE, PG_LIFE*time.Minute),
 	}
 
+	if p.Tst[1] != "" {
+		sch, err := etl.GetCurrentLgSchedules()
+		if err != nil {
+			fmt.Println("failed to get schedules:", err)
+			os.Exit(1)
+		}
+		fmt.Printf("NBA SCHEDULE:\n%v\n\n", sch.N)
+		fmt.Printf("WNBA SCHEDULE:\n%v\n\n", sch.W)
+
+		fmt.Println("MAPS:")
+		fmt.Println(sch.LgMap["nba"])
+
+		os.Exit(0)
+	}
+
 	// if a logf val is passed, set logger as existing file or stdout
 	// otherwise, create new file
 	var tmpLg io.Writer

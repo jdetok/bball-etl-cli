@@ -22,6 +22,7 @@ func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) GetReq 
 			{"DateTo", dateTo},
 		},
 	}
+	fmt.Println("requesting gamelogs:", gr.MakeFulLURL())
 	return gr
 }
 
@@ -147,24 +148,38 @@ func GLogDailyETL(cnf *Conf, df, dt string) error {
 	sl := GetSeasons()
 	var szns = []string{sl.Szn, sl.WSzn}
 
+	sch, err := GetCurrentLgSchedules()
+	if err != nil {
+		return fmt.Errorf("error getting schedules: %v", err)
+	}
+	sTypes := []string{"Playoffs", "Regular+Season"}
 	// makes 4 calls to leaguegamelog endpoint
-	for i := range lt.lgs { // outer loop, 2 calls per lg
+	for i, lg := range lt.lgs { // outer loop, 2 calls per lg
+
 		for _, t := range lt.tbls {
-			for _, s := range []string{"Regular+Season", "Playoffs"} {
-				// create request
-				r := GameLogReqNew(lt.lgs[i], szns[i], s, t.PlTm, df, dt)
-				cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s, DATE=%s",
-					r.Endpoint, lt.lgs[i], szns[i], s, t.PlTm, df)
-				// run etl
-				err := GameLogETL(cnf, r, t.Name, t.PrimKey)
-				if err != nil {
-					return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s, PLTM=%s, DATE=%s: %v",
-						lt.lgs[i], szns[i], t.PlTm, df, err)
+			for _, s := range sTypes {
+				if isPlOff, ok := sch.LgMap[lg][df]; ok {
+					if (s == "Playoffs" && !isPlOff) || (s == "Regular+Season" && isPlOff) {
+						continue
+					}
+					// create request
+					r := GameLogReqNew(lg, szns[i], s, t.PlTm, df, dt)
+					cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s, DATE=%s",
+						r.Endpoint, lg, szns[i], s, t.PlTm, df)
+					// run etl
+					err := GameLogETL(cnf, r, t.Name, t.PrimKey)
+					if err != nil {
+						return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s, PLTM=%s, DATE=%s: %v",
+							lg, szns[i], t.PlTm, df, err)
+					}
+				} else {
+					cnf.Lg.Infof("SKIPPING LG=%s, SZN=%s %s, DATE=%s", lg, szns[i], s)
+					continue
 				}
 			}
 			// success, next call
 			cnf.Lg.Infof("finished with LG=%s, SZN=%s, PLTM=%s, DATE=%s",
-				lt.lgs[i], szns[i], t.PlTm, df)
+				lg, szns[i], t.PlTm, df)
 		}
 	}
 	return nil
