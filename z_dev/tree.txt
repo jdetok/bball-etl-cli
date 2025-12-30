@@ -1,0 +1,42 @@
+.
+├── Dockerfile
+├── LICENSE
+├── bin
+│   ├── cli
+│   ├── cliv2
+│   └── logf_test
+├── compose.yaml
+├── go.mod
+├── go.sum
+├── main
+│   └── main.go
+├── pkg
+│   ├── cli
+│   │   └── cli.go
+│   ├── cnf
+│   │   └── cnf.go
+│   ├── conn
+│   │   └── conn.go
+│   ├── etl
+│   │   ├── etl.go
+│   │   ├── gamelog.go
+│   │   ├── players.go
+│   │   ├── schedule.go
+│   │   └── seasons.go
+│   ├── get
+│   │   ├── base.go
+│   │   ├── req.go
+│   │   └── resp.go
+│   ├── logd
+│   │   └── logd.go
+│   ├── maild
+│   │   └── maild.go
+│   └── pgdb
+│       ├── insert.go
+│       └── pgdb.go
+└── scripts
+    ├── bld.sh
+    ├── dly.sh
+    └── dlydev.sh
+
+13 directories, 27 files
