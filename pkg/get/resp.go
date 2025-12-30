@@ -3,8 +3,6 @@ package get
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 )
 
 type Resp struct {
@@ -18,47 +16,6 @@ type ResultSet struct {
 	Name    string   `json:"name"`
 	Headers []string `json:"headers"`
 	RowSet  [][]any  `json:"rowSet"`
-}
-
-// pass a defined GetReq struct, unmarshals body & returns as Resp struct
-func RequestResp(gr GetReq) (*Resp, error) {
-	var resp Resp
-	body, err := gr.BodyFromReq()
-	if err != nil {
-		return nil, err
-	}
-	resp, err = UnmarshalInto(body)
-	if err != nil {
-		return &resp, fmt.Errorf("error unmarshaling: %e", err)
-	}
-	return &resp, nil
-}
-
-/*
-use http client to perform http request
-get & return body as []byte
-*/
-func RespFromClient(req *http.Request) ([]byte, error) {
-	var errMsg string
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		if res != nil {
-			if res.StatusCode == 429 {
-				errMsg = fmt.Sprint(res.StatusCode, "- timeout error")
-			} else {
-				errMsg = fmt.Sprint(res.StatusCode, "- HTTP client error occured")
-			}
-		}
-		errMsg = "*500 - HTTP client error occured, no response received"
-		return nil, fmt.Errorf("%s: %v", errMsg, err)
-	}
-
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("%d error reading response body: %v", res.StatusCode, err)
-	}
-	return body, nil
 }
 
 /*

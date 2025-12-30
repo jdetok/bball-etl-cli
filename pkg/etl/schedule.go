@@ -99,7 +99,7 @@ func SchedReq(league, season string) get.GetReq {
 }
 
 func RequestSchedule(gr get.GetReq) (*RespSched, error) {
-	fmt.Printf("requesting data from %s...\n", gr.Endpoint)
+	// fmt.Printf("requesting data from %s...\n", gr.Endpoint)
 	body, err := gr.BodyFromReq()
 	if err != nil {
 		return nil, fmt.Errorf("error getting schedule response: %v", err)

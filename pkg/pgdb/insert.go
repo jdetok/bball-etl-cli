@@ -26,6 +26,12 @@ type Table struct {
 type LgTbls struct {
 	Lgs  []string
 	Tbls []Table
+	Into map[string]Table
+}
+
+type Loader interface {
+	Insert(*cnf.Conf) error
+	InsertFast(*cnf.Conf) error
 }
 
 func MakeInsert(tbl, primKey string, cols []string, rows [][]any) InsertStmnt {

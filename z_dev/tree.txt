@@ -40,3 +40,7 @@
     └── dlydev.sh
 
 13 directories, 27 files
+pg_dump --create --no-owner -U $PG_USER -d bball | gzip > dump/tst.sql.gz   
+pg_dump --no-owner -U $PG_USER -d bball | gzip > dump/tst.sql.gz   
+
+pg_dump --create --no-owner -U $PG_USER -d bball | gzip > dump/local_123025.sql.gz  
