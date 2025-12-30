@@ -16,12 +16,12 @@ type Conf struct {
 	Errs   []string
 }
 
-func RunNightlyETL(cnf *Conf) error {
+func RunNightlyETL(cnf *Conf, df, dt string) error {
 	if err := CrntPlayersETL(cnf); err != nil {
 		return fmt.Errorf("error with current players ETL: %v", err)
 	}
 
-	if err := GLogDailyETL(cnf); err != nil {
+	if err := GLogDailyETL(cnf, df, dt); err != nil {
 		return fmt.Errorf("error with nightly game log ETL: %v", err)
 	}
 

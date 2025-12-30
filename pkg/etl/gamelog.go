@@ -3,7 +3,6 @@ package etl
 import (
 	"fmt"
 	"strconv"
-	"time"
 )
 
 func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) GetReq {
@@ -141,12 +140,9 @@ func GLogSeasonETL(cnf *Conf, szn string) error {
 	return nil
 }
 
-/*
-nightly game log fetch both PlayerTeam=P & T and NBA and WNBA
-using yeseterday's date as DateFrom/DateTo
-*/
-func GLogDailyETL(cnf *Conf) error {
-	yesterday := Yesterday(time.Now())
+// nightly game log fetch both PlayerTeam=P & T and NBA and WNBA
+// using yeseterday's date as DateFrom/DateTo
+func GLogDailyETL(cnf *Conf, df, dt string) error {
 	lt := GLogParams()
 	sl := GetSeasons()
 	var szns = []string{sl.Szn, sl.WSzn}
@@ -156,19 +152,19 @@ func GLogDailyETL(cnf *Conf) error {
 		for _, t := range lt.tbls {
 			for _, s := range []string{"Regular+Season", "Playoffs"} {
 				// create request
-				r := GameLogReqNew(lt.lgs[i], szns[i], s, t.PlTm, yesterday, yesterday)
+				r := GameLogReqNew(lt.lgs[i], szns[i], s, t.PlTm, df, dt)
 				cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s, DATE=%s",
-					r.Endpoint, lt.lgs[i], szns[i], s, t.PlTm, yesterday)
+					r.Endpoint, lt.lgs[i], szns[i], s, t.PlTm, df)
 				// run etl
 				err := GameLogETL(cnf, r, t.Name, t.PrimKey)
 				if err != nil {
 					return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s, PLTM=%s, DATE=%s: %v",
-						lt.lgs[i], szns[i], t.PlTm, yesterday, err)
+						lt.lgs[i], szns[i], t.PlTm, df, err)
 				}
 			}
 			// success, next call
 			cnf.Lg.Infof("finished with LG=%s, SZN=%s, PLTM=%s, DATE=%s",
-				lt.lgs[i], szns[i], t.PlTm, yesterday)
+				lt.lgs[i], szns[i], t.PlTm, df)
 		}
 	}
 	return nil

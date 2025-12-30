@@ -111,12 +111,13 @@ func main() {
 	switch runMode {
 	case "daily", "dly", "d", "": // daily etl: etl for previous day's games
 		// RUN NIGHTLY ETL
-		if err = etl.RunNightlyETL(app.Cnf); err != nil {
-			app.Cnf.Lg.Fatalf("error with %v daily etl", etl.Yesterday(time.Now()))
+		yday := etl.Yesterday(time.Now())
+		if err = etl.RunNightlyETL(app.Cnf, yday, yday); err != nil {
+			app.Cnf.Lg.Fatalf("error with %v daily etl: %v", yday, err)
 		}
 		app.CmplMsg = fmt.Sprintf( // assign in switch
 			"++ daily etl for %v complete \n++ total rows affected: %d\n",
-			etl.Yesterday(time.Now()), app.Cnf.RowCnt,
+			yday, app.Cnf.RowCnt,
 		)
 		// build etl: all seasons 1970 through current
 	case "build", "bld", "b":
@@ -136,10 +137,30 @@ func main() {
 		// exit if no season passed
 		szn := p.Szn[1]
 		lg := p.Lg[1]
+		df := p.DateFrom[1]
+		dt := p.DateTo[1]
 
-		if szn == "" {
-			app.Cnf.Lg.Fatalf("a season (-szn) must be specified in custom mode")
+		if szn == "" && df == "" && dt == "" {
+			app.Cnf.Lg.Fatalf("a season or date must be specified in custom mode")
 		}
+
+		// custom dates
+		if df != "" || dt != "" {
+			if dt == "" && df != "" {
+				dt = df
+			} else if df == "" && dt != "" {
+				df = dt
+			}
+			if err = etl.RunNightlyETL(app.Cnf, df, dt); err != nil {
+				app.Cnf.Lg.Fatalf("error with %s-%s daily etl: %v", df, dt, err)
+			}
+			app.CmplMsg = fmt.Sprintf( // assign in switch
+				"++ daily etl for %s-%s complete \n++ total rows affected: %d\n",
+				df, dt, app.Cnf.RowCnt,
+			)
+			break
+		}
+
 		// switch on lg to determine whether to do both leagues or just one
 		switch lg {
 		case "":
