@@ -1,4 +1,4 @@
-package etl
+package get
 
 const HOST string = "stats.nba.com"
 

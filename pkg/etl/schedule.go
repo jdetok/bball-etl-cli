@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/jdetok/bball-etl-cli/pkg/get"
 )
 
 // calls scheduleleaguev2 endpoint for schedule start/end dates
@@ -44,9 +46,9 @@ func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 	lgs := []string{"nba", "wnba"}
 	for _, lg := range lgs {
 
-		gr := GetReq{
+		gr := get.GetReq{
 			Host:     fmt.Sprintf("cdn.%s.com", lg),
-			Headers:  HDRS,
+			Headers:  get.HDRS,
 			Endpoint: "/static/json/staticData/scheduleLeagueV2.json",
 		}
 		resp, err := RequestSchedule(gr)
@@ -83,12 +85,12 @@ func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 	return ls, nil
 }
 
-func SchedReq(league, season string) GetReq {
-	var gr = GetReq{
-		Host:     HOST,
-		Headers:  HDRS,
+func SchedReq(league, season string) get.GetReq {
+	var gr = get.GetReq{
+		Host:     get.HOST,
+		Headers:  get.HDRS,
 		Endpoint: "/stats/scheduleleaguev2",
-		Params: []Pair{
+		Params: []get.Pair{
 			{"LeagueID", league},
 			{"Season", season},
 		},
@@ -96,7 +98,7 @@ func SchedReq(league, season string) GetReq {
 	return gr
 }
 
-func RequestSchedule(gr GetReq) (*RespSched, error) {
+func RequestSchedule(gr get.GetReq) (*RespSched, error) {
 	fmt.Printf("requesting data from %s...\n", gr.Endpoint)
 	body, err := gr.BodyFromReq()
 	if err != nil {

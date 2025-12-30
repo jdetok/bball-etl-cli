@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
+	"github.com/jdetok/bball-etl-cli/pkg/get"
 	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
 )
 
-func PlayerReq(onlyCurrent, league, season string) GetReq {
-	var gr = GetReq{
-		Host:     HOST,
-		Headers:  HDRS,
+func PlayerReq(onlyCurrent, league, season string) get.GetReq {
+	var gr = get.GetReq{
+		Host:     get.HOST,
+		Headers:  get.HDRS,
 		Endpoint: "/stats/commonallplayers",
-		Params: []Pair{
+		Params: []get.Pair{
 			{"IsOnlyCurrentSeason", onlyCurrent},
 			{"LeagueID", league},
 			{"Season", season},
@@ -55,7 +56,7 @@ func SznPlayersETL(c *cnf.Conf, onlyCurrent, season string) error {
 		c.Lg.Infof("attempting to insert %s %s players", season, lg)
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
 		r := PlayerReq(onlyCurrent, pp.Lgs[i], season)
-		resp, err := RequestResp(r)
+		resp, err := get.RequestResp(r)
 		if err != nil {
 			return fmt.Errorf("error getting response for %s: lg: %s szn: %s: %v", r.Endpoint, lg, season, err)
 		}
@@ -106,7 +107,7 @@ func CrntPlayersETL(c *cnf.Conf) error {
 		c.Lg.Infof("attempting to insert current %s players", lg)
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
 		r := PlayerReq("1", pp.Lgs[i], szns[i])
-		resp, err := RequestResp(r)
+		resp, err := get.RequestResp(r)
 		if err != nil {
 			return fmt.Errorf("error getting response for %s: %v", r.Endpoint, err)
 		}

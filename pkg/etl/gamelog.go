@@ -6,15 +6,16 @@ import (
 	"strconv"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
+	"github.com/jdetok/bball-etl-cli/pkg/get"
 	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
 )
 
-func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) GetReq {
-	var gr = GetReq{
-		Host:     HOST,
-		Headers:  HDRS,
+func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) get.GetReq {
+	var gr = get.GetReq{
+		Host:     get.HOST,
+		Headers:  get.HDRS,
 		Endpoint: "/stats/leaguegamelog",
-		Params: []Pair{
+		Params: []get.Pair{
 			{"LeagueID", league},
 			{"Season", season},
 			{"SeasonType", sType},
@@ -30,12 +31,12 @@ func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) GetReq 
 	return gr
 }
 
-func GameLogReq(league, season, plTm, dateFrom, dateTo string) GetReq {
-	var gr = GetReq{
-		Host:     HOST,
-		Headers:  HDRS,
+func GameLogReq(league, season, plTm, dateFrom, dateTo string) get.GetReq {
+	var gr = get.GetReq{
+		Host:     get.HOST,
+		Headers:  get.HDRS,
 		Endpoint: "/stats/leaguegamelog",
-		Params: []Pair{
+		Params: []get.Pair{
 			{"LeagueID", league},
 			{"Season", season},
 			{"SeasonType", "Regular+Season"},
@@ -190,9 +191,9 @@ func GLogDailyETL(c *cnf.Conf, df, dt string) error {
 	return nil
 }
 
-func GameLogETL(c *cnf.Conf, r GetReq, tbl, primKey string) error {
+func GameLogETL(c *cnf.Conf, r get.GetReq, tbl, primKey string) error {
 	// call endpoint in HTTP request, return Resp struct
-	resp, err := RequestResp(r)
+	resp, err := get.RequestResp(r)
 	if err != nil {
 		return fmt.Errorf("error getting response for %s: %v", r.Endpoint, err)
 	}
