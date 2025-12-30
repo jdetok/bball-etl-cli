@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cli"
+	"github.com/jdetok/bball-etl-cli/pkg/cnf"
 	"github.com/jdetok/bball-etl-cli/pkg/conn"
 	"github.com/jdetok/bball-etl-cli/pkg/etl"
 	"github.com/jdetok/bball-etl-cli/pkg/logd"
@@ -33,7 +34,7 @@ const (
 
 type App struct {
 	DBConf    *pgdb.DBConfig
-	Cnf       *etl.Conf
+	Cnf       *cnf.Conf
 	CmplMsg   string
 	StartTime time.Time
 }
@@ -49,7 +50,7 @@ func main() {
 
 	app := &App{
 		StartTime: time.Now(),
-		Cnf:       &etl.Conf{},
+		Cnf:       &cnf.Conf{},
 		DBConf:    pgdb.NewDBConf(PG_OPEN, PG_IDLE, PG_LIFE*time.Minute),
 	}
 

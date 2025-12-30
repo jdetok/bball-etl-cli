@@ -1,8 +1,12 @@
 package etl
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/jdetok/bball-etl-cli/pkg/cnf"
+	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
 )
 
 func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) GetReq {
@@ -46,10 +50,10 @@ func GameLogReq(league, season, plTm, dateFrom, dateTo string) GetReq {
 	return gr
 }
 
-func GLogParams() LgTbls {
-	var lt LgTbls
-	lt.lgs = []string{"00", "10"}
-	lt.tbls = []Table{
+func GLogParams() pgdb.LgTbls {
+	var lt pgdb.LgTbls
+	lt.Lgs = []string{"00", "10"}
+	lt.Tbls = []pgdb.Table{
 		{
 			Name:    "intake.gm_team",
 			PrimKey: "game_id, team_id",
@@ -65,45 +69,45 @@ func GLogParams() LgTbls {
 }
 
 // TODO: specific season/league ETL
-func LgSznGlogs(cnf *Conf, lg, szn string) error {
+func LgSznGlogs(c *cnf.Conf, lg, szn string) error {
 	lt := GLogParams()
 	var lg_id string
 	switch lg {
 	case "nba":
-		lg_id = lt.lgs[0] // "00"
+		lg_id = lt.Lgs[0] // "00"
 	case "wnba":
-		lg_id = lt.lgs[1] // "10"
+		lg_id = lt.Lgs[1] // "10"
 	}
 
-	for _, t := range lt.tbls {
+	for _, t := range lt.Tbls {
 		for _, s := range []string{"Regular+Season", "Playoffs"} {
 			// create request
 			r := GameLogReqNew(lg_id, szn, s, t.PlTm, "", "")
-			cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s", r.Endpoint, lg, szn, s, t.PlTm)
+			c.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s", r.Endpoint, lg, szn, s, t.PlTm)
 
 			// attempt to fetch & insert for current iteration
 			// func returns run of insert
-			err := GameLogETL(cnf, r, t.Name, t.PrimKey)
+			err := GameLogETL(c, r, t.Name, t.PrimKey)
 			if err != nil {
 				return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s %s, PLTM=%s",
 					lg, szn, s, t.PlTm)
 			}
 			// success, next call
-			cnf.Lg.Infof("finished with LG=%s, SZN=%s %s, PLTM=%s", lg, szn, s, t.PlTm)
+			c.Lg.Infof("finished with LG=%s, SZN=%s %s, PLTM=%s", lg, szn, s, t.PlTm)
 		}
 	}
 	return nil
 }
 
 // run single season
-func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
+func GetManyGLogs(c *cnf.Conf, lgs []string, tbls []pgdb.Table, szn string) error {
 	for i := range lgs { // outer loop, 2 calls per lg
 		sznY, err := strconv.Atoi(szn[:4])
 		if err != nil {
 			return fmt.Errorf("getting int from season %s", szn)
 		} // no wnba pre 1997
 		if lgs[i] == "10" && sznY < 1996 {
-			cnf.Lg.Infof("skipping WNBA %s - first WNBA season was 1997-98", szn)
+			c.Lg.Infof("skipping WNBA %s - first WNBA season was 1997-98", szn)
 			continue
 		} // loop through tables (PlTm, intake.gm_team, intake.gm_player)
 		for _, t := range tbls {
@@ -111,18 +115,18 @@ func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
 			for _, s := range []string{"Regular+Season", "Playoffs"} {
 				// create request
 				r := GameLogReqNew(lgs[i], szn, s, t.PlTm, "", "")
-				cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s",
+				c.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s",
 					r.Endpoint, lgs[i], szn, s, t.PlTm)
 
 				// attempt to fetch & insert for current iteration
 				// func returns run of insert
-				err := GameLogETL(cnf, r, t.Name, t.PrimKey)
+				err := GameLogETL(c, r, t.Name, t.PrimKey)
 				if err != nil {
 					return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s %s, PLTM=%s",
 						lgs[i], szn, s, t.PlTm)
 				}
 				// success, next call
-				cnf.Lg.Infof("finished with LG=%s, SZN=%s %s, PLTM=%s", lgs[i], szn, s, t.PlTm)
+				c.Lg.Infof("finished with LG=%s, SZN=%s %s, PLTM=%s", lgs[i], szn, s, t.PlTm)
 			}
 		}
 	}
@@ -130,20 +134,20 @@ func GetManyGLogs(cnf *Conf, lgs []string, tbls []Table, szn string) error {
 }
 
 // should be able to use this for the custom mode without league specified
-func GLogSeasonETL(cnf *Conf, szn string) error {
+func GLogSeasonETL(c *cnf.Conf, szn string) error {
 	lt := GLogParams()
-	err := GetManyGLogs(cnf, lt.lgs, lt.tbls, szn)
+	err := GetManyGLogs(c, lt.Lgs, lt.Tbls, szn)
 	if err != nil {
 		errMsg := fmt.Sprintf("error running ETL for %s: %v", szn, err)
-		cnf.Errs = append(cnf.Errs, errMsg) // capture if an error occured
-		return fmt.Errorf(errMsg)
+		c.Errs = append(c.Errs, errMsg) // capture if an error occured
+		return errors.New(errMsg)
 	}
 	return nil
 }
 
 // nightly game log fetch both PlayerTeam=P & T and NBA and WNBA
 // using yeseterday's date as DateFrom/DateTo
-func GLogDailyETL(cnf *Conf, df, dt string) error {
+func GLogDailyETL(c *cnf.Conf, df, dt string) error {
 	lt := GLogParams()
 	sl := GetSeasons()
 	var szns = []string{sl.Szn, sl.WSzn}
@@ -152,11 +156,12 @@ func GLogDailyETL(cnf *Conf, df, dt string) error {
 	if err != nil {
 		return fmt.Errorf("error getting schedules: %v", err)
 	}
+
 	sTypes := []string{"Playoffs", "Regular+Season"}
 	// makes 4 calls to leaguegamelog endpoint
-	for i, lg := range lt.lgs { // outer loop, 2 calls per lg
+	for i, lg := range lt.Lgs { // outer loop, 2 calls per lg
 
-		for _, t := range lt.tbls {
+		for _, t := range lt.Tbls {
 			for _, s := range sTypes {
 				if isPlOff, ok := sch.LgMap[lg][df]; ok {
 					if (s == "Playoffs" && !isPlOff) || (s == "Regular+Season" && isPlOff) {
@@ -164,28 +169,28 @@ func GLogDailyETL(cnf *Conf, df, dt string) error {
 					}
 					// create request
 					r := GameLogReqNew(lg, szns[i], s, t.PlTm, df, dt)
-					cnf.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s, DATE=%s",
+					c.Lg.Infof("attempting to fetch %s: LG=%s, SZN=%s %s, PLTM=%s, DATE=%s",
 						r.Endpoint, lg, szns[i], s, t.PlTm, df)
 					// run etl
-					err := GameLogETL(cnf, r, t.Name, t.PrimKey)
+					err := GameLogETL(c, r, t.Name, t.PrimKey)
 					if err != nil {
 						return fmt.Errorf("error during daily game log ETL. LG=%s, SZN=%s, PLTM=%s, DATE=%s: %v",
 							lg, szns[i], t.PlTm, df, err)
 					}
 				} else {
-					cnf.Lg.Infof("SKIPPING LG=%s, SZN=%s %s, DATE=%s", lg, szns[i], s)
+					c.Lg.Infof("SKIPPING LG=%s, SZN=%s %s, DATE=%s", lg, szns[i], s)
 					continue
 				}
 			}
 			// success, next call
-			cnf.Lg.Infof("finished with LG=%s, SZN=%s, PLTM=%s, DATE=%s",
+			c.Lg.Infof("finished with LG=%s, SZN=%s, PLTM=%s, DATE=%s",
 				lg, szns[i], t.PlTm, df)
 		}
 	}
 	return nil
 }
 
-func GameLogETL(cnf *Conf, r GetReq, tbl, primKey string) error {
+func GameLogETL(c *cnf.Conf, r GetReq, tbl, primKey string) error {
 	// call endpoint in HTTP request, return Resp struct
 	resp, err := RequestResp(r)
 	if err != nil {
@@ -196,17 +201,17 @@ func GameLogETL(cnf *Conf, r GetReq, tbl, primKey string) error {
 	var cols []string = resp.ResultSets[0].Headers
 	var rows [][]any = resp.ResultSets[0].RowSet
 	if len(rows) == 0 {
-		cnf.Lg.Infof("response returned 0 rows, exiting")
+		c.Lg.Infof("response returned 0 rows, exiting")
 		return nil
 	}
-	cnf.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
+	c.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 
 	// prepare the sql statement & chunks of values
-	ins := MakeInsert(
+	ins := pgdb.MakeInsert(
 		tbl,
 		primKey,
 		cols,
 		rows,
 	) // attempt to insert rows from response
-	return ins.InsertFast(cnf)
+	return ins.InsertFast(c)
 }

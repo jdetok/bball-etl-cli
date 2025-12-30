@@ -1,9 +1,11 @@
-package etl
+package pgdb
 
 import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/jdetok/bball-etl-cli/pkg/cnf"
 )
 
 type InsertStmnt struct {
@@ -22,8 +24,8 @@ type Table struct {
 }
 
 type LgTbls struct {
-	lgs  []string
-	tbls []Table
+	Lgs  []string
+	Tbls []Table
 }
 
 func MakeInsert(tbl, primKey string, cols []string, rows [][]any) InsertStmnt {
@@ -89,7 +91,7 @@ func (ins *InsertStmnt) ChunkVals() {
 }
 
 // loop through the chunks & attempt to insert all rows from each one
-func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
+func (ins *InsertStmnt) InsertFast(cnf *cnf.Conf) error {
 	var wg sync.WaitGroup
 	// var g errgroup.errgroup
 	var mu sync.Mutex
@@ -129,7 +131,7 @@ func (ins *InsertStmnt) InsertFast(cnf *Conf) error {
 }
 
 // loop through the chunks & attempt to insert all rows from each one
-func (ins *InsertStmnt) Insert(cnf *Conf) error {
+func (ins *InsertStmnt) Insert(cnf *cnf.Conf) error {
 	for i, c := range ins.Chunks {
 		res, err := cnf.DB.Exec(ins.BuildStmnt(c), ValsFromSet(c)...)
 		if err != nil {

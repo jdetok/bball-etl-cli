@@ -2,6 +2,9 @@ package etl
 
 import (
 	"fmt"
+
+	"github.com/jdetok/bball-etl-cli/pkg/cnf"
+	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
 )
 
 func PlayerReq(onlyCurrent, league, season string) GetReq {
@@ -18,10 +21,10 @@ func PlayerReq(onlyCurrent, league, season string) GetReq {
 	return gr
 }
 
-func PlayersParams() LgTbls {
-	var lt LgTbls
-	lt.lgs = []string{"00", "10"}
-	lt.tbls = []Table{
+func PlayersParams() pgdb.LgTbls {
+	var lt pgdb.LgTbls
+	lt.Lgs = []string{"00", "10"}
+	lt.Tbls = []pgdb.Table{
 		{
 			Name:    "intake.player",
 			PrimKey: "person_id",
@@ -36,22 +39,22 @@ func PlayersParams() LgTbls {
 
 // SAME AS CURRENT PLAYER ETL BUT FOR INDIVIDUAL SEASON
 // WILL NEED A NEW GET SEASONS FUNCTION AS WELL
-func SznPlayersETL(cnf *Conf, onlyCurrent, season string) error {
+func SznPlayersETL(c *cnf.Conf, onlyCurrent, season string) error {
 	pp := PlayersParams()
-	cnf.Lg.Infof("attempting players ETL for %s nba/wnba seasons", season)
+	c.Lg.Infof("attempting players ETL for %s nba/wnba seasons", season)
 
-	for i := range pp.lgs {
+	for i := range pp.Lgs {
 		var lg string
-		switch pp.lgs[i] {
+		switch pp.Lgs[i] {
 		case "00":
 			lg = "nba"
 		case "10":
 			lg = "wnba"
 		}
 
-		cnf.Lg.Infof(fmt.Sprintf("attempting to insert %s %s players", season, lg))
+		c.Lg.Infof("attempting to insert %s %s players", season, lg)
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
-		r := PlayerReq(onlyCurrent, pp.lgs[i], season)
+		r := PlayerReq(onlyCurrent, pp.Lgs[i], season)
 		resp, err := RequestResp(r)
 		if err != nil {
 			return fmt.Errorf("error getting response for %s: lg: %s szn: %s: %v", r.Endpoint, lg, season, err)
@@ -64,45 +67,45 @@ func SznPlayersETL(cnf *Conf, onlyCurrent, season string) error {
 		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
-			cnf.Lg.Infof("response returned 0 rows, exiting")
+			c.Lg.Infof("response returned 0 rows, exiting")
 			return nil
 		}
-		cnf.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
+		c.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 
 		// prepare the sql statement & chunks of values
-		ins := MakeInsert(
-			pp.tbls[i].Name,
-			pp.tbls[i].PrimKey,
+		ins := pgdb.MakeInsert(
+			pp.Tbls[i].Name,
+			pp.Tbls[i].PrimKey,
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(cnf)
+		ins.InsertFast(c)
 
-		cnf.Lg.Infof("%s %s players ETL complete", season, lg)
+		c.Lg.Infof("%s %s players ETL complete", season, lg)
 	}
-	cnf.Lg.Infof("players ETL complete for ", season)
+	c.Lg.Infof("players ETL complete for %s", season)
 	return nil
 }
 
-func CrntPlayersETL(cnf *Conf) error {
+func CrntPlayersETL(c *cnf.Conf) error {
 	sl := GetSeasons()
 	var szns = []string{sl.Szn, sl.WSzn}
 	pp := PlayersParams()
 
-	cnf.Lg.Infof("attempting current players ETL for %s nba season and %s wnba season", sl.Szn, sl.WSzn)
+	c.Lg.Infof("attempting current players ETL for %s nba season and %s wnba season", sl.Szn, sl.WSzn)
 
-	for i := range pp.lgs {
+	for i := range pp.Lgs {
 		var lg string
-		switch pp.lgs[i] {
+		switch pp.Lgs[i] {
 		case "00":
 			lg = "nba"
 		case "10":
 			lg = "wnba"
 		}
 
-		cnf.Lg.Infof("attempting to insert current %s players", lg)
+		c.Lg.Infof("attempting to insert current %s players", lg)
 		// r := PlayerReq(onlyCurrent, p[0], p[1])
-		r := PlayerReq("1", pp.lgs[i], szns[i])
+		r := PlayerReq("1", pp.Lgs[i], szns[i])
 		resp, err := RequestResp(r)
 		if err != nil {
 			return fmt.Errorf("error getting response for %s: %v", r.Endpoint, err)
@@ -115,22 +118,22 @@ func CrntPlayersETL(cnf *Conf) error {
 		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
-			cnf.Lg.Infof("response returned 0 rows, exiting")
+			c.Lg.Infof("response returned 0 rows, exiting")
 			return nil
 		}
-		cnf.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
+		c.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 
 		// prepare the sql statement & chunks of values
-		ins := MakeInsert(
-			pp.tbls[i].Name,
-			pp.tbls[i].PrimKey,
+		ins := pgdb.MakeInsert(
+			pp.Tbls[i].Name,
+			pp.Tbls[i].PrimKey,
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(cnf)
+		ins.InsertFast(c)
 
-		cnf.Lg.Infof("current %s players ETL complete", lg)
+		c.Lg.Infof("current %s players ETL complete", lg)
 	}
-	cnf.Lg.Infof("current players ETL complete for all leagues")
+	c.Lg.Infof("current players ETL complete for all leagues")
 	return nil
 }
