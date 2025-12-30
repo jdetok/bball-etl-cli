@@ -73,11 +73,13 @@ func main() {
 	var pgEnv *conn.DBEnv
 	var envErr error
 	var envF string = p.EnvFile[1]
-	if envF == "" || envF == "skip" {
+	switch envF {
+	case "", "skip": // don't load a .env file (env vars already exist)
 		pgEnv, envErr = conn.Load(PG_HOSTN, PG_PORTN, PG_USERN, PG_PASSN, PG_DATAN)
-	} else {
+	default:
 		pgEnv, envErr = conn.LoadFromDotEnv(envF, PG_HOSTN, PG_PORTN, PG_USERN, PG_PASSN, PG_DATAN)
 	}
+
 	if envErr != nil {
 		app.Cnf.Lg.Fatalf("failed to load environment variables: %v", envErr)
 	}
@@ -91,8 +93,7 @@ func main() {
 
 	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
 	runMode := p.Mode[1]
-	switch runMode {
-	case "email": // send log file in an email
+	if runMode == "email" {
 		atch := p.Atch[1]
 		if atch == "" {
 			app.Cnf.Lg.Fatalf("must pass an attachment in email mode")
@@ -106,15 +107,15 @@ func main() {
 		if err := maild.EmailLog(atch, GM_USERN, GM_PASSN, GM_HOSTN, GM_PORTN); err != nil {
 			app.Cnf.Lg.Fatalf("error emailing log: %v", err)
 		}
-
-	// daily etl: etl for previous day's games
-	case "daily", "dly", "d", "":
+	}
+	switch runMode {
+	case "daily", "dly", "d", "": // daily etl: etl for previous day's games
 		// RUN NIGHTLY ETL
 		if err = etl.RunNightlyETL(app.Cnf); err != nil {
 			app.Cnf.Lg.Fatalf("error with %v daily etl", etl.Yesterday(time.Now()))
 		}
 		app.CmplMsg = fmt.Sprintf( // assign in switch
-			"++ daily etl for %v complete | total rows affected: %d\n",
+			"++ daily etl for %v complete \n++ total rows affected: %d\n",
 			etl.Yesterday(time.Now()), app.Cnf.RowCnt,
 		)
 		// build etl: all seasons 1970 through current
@@ -127,44 +128,42 @@ func main() {
 		if err = etl.RunSeasonETL(app.Cnf, st, en); err != nil {
 			app.Cnf.Lg.Fatalf("error running season etl: start year: %s | end year: %s", st, en)
 		}
-		app.CmplMsg = fmt.Sprintf(
-			"++ etl for seasons between %s and %s | total rows affected: %d\n",
-			st, en, app.Cnf.RowCnt,
-		)
+		app.Cnf.Lg.Infof("++ etl for seasons between %s and %s | total rows affected: %d\n",
+			st, en, app.Cnf.RowCnt)
 
 		// "custom" run - a season MUST be specified, lg defaults to both
 	case "custom":
 		// exit if no season passed
-		if p.Szn[1] == "" {
+		szn := p.Szn[1]
+		lg := p.Lg[1]
+
+		if szn == "" {
 			app.Cnf.Lg.Fatalf("a season (-szn) must be specified in custom mode")
 		}
 		// switch on lg to determine whether to do both leagues or just one
-		switch p.Lg[1] {
+		switch lg {
 		case "":
 			// RUN FOR BOTH NBA AND WNBA
-			if err := etl.GLogSeasonETL(app.Cnf, p.Szn[1]); err != nil {
-				app.Cnf.Lg.Fatalf("error running etl for %s season", p.Szn[1])
+			if err := etl.GLogSeasonETL(app.Cnf, szn); err != nil {
+				app.Cnf.Lg.Fatalf("error running etl for %s season", szn)
 			}
-			app.CmplMsg = fmt.Sprintf(
-				"++ etl for %s nba/wnba seasons | total rows affected: %d\n",
-				p.Szn[1], app.Cnf.RowCnt,
+			app.Cnf.Lg.Infof("++ COMPLETED {SZN: %s} nba/wnba seasons | total rows affected: %d\n",
+				szn, app.Cnf.RowCnt,
 			)
 		case "nba", "wnba":
 			// TODO: specific season fetch
-			if err := etl.LgSznGlogs(app.Cnf, p.Lg[1], p.Szn[1]); err != nil {
+			if err := etl.LgSznGlogs(app.Cnf, lg, szn); err != nil {
 				app.Cnf.Lg.Fatalf("error running etl for %s %s season",
-					p.Szn[1], p.Lg[1])
+					szn, lg)
 			}
-			app.CmplMsg = fmt.Sprintf(
-				"++ etl for %s %s seasons | total rows affected: %d\n",
-				p.Szn[1], p.Lg[1], app.Cnf.RowCnt,
-			)
 		}
-		// EMAIL MODE: RUN AT END OF SH
+		app.Cnf.Lg.Infof("COMPLETED {SZN: %s} {LG: %s} ETL\n++ total rows affected: %d\n",
+			szn, lg, app.Cnf.RowCnt,
+		)
 
 	// NO ARGS PASSED - ERROR OUT
 	default:
-		app.Cnf.Lg.Fatalf("invalid mode: '%s' is not an option", p.Mode[1])
+		app.Cnf.Lg.Fatalf("invalid mode: '%s' is not an option", runMode)
 	}
 
 	// write errors to the log
@@ -175,6 +174,6 @@ func main() {
 	}
 
 	// complete log
-	app.Cnf.Lg.Infof("etl complete\n++ start time: %v\n++ complete time: %v\n++ duration: %v\n%s",
+	app.Cnf.Lg.Infof("ETL COMPLETE\n++ STARTED AT: %v\n++ COMPLETED AT: %v\n++ RUNTIME: %v\n%s",
 		app.StartTime, time.Now(), time.Since(app.StartTime), app.CmplMsg)
 }

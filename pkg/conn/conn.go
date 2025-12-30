@@ -36,7 +36,7 @@ func Load(hostN, portN, userN, passN, dbN string) (*DBEnv, error) {
 
 func LoadFromDotEnv(dotenvF, hostN, portN, userN, passN, dbN string) (*DBEnv, error) {
 	if err := godotenv.Load(dotenvF); err != nil {
-		return nil, fmt.Errorf("failed to load .env file from %s: %v", err)
+		return nil, fmt.Errorf("failed to load .env file from %s: %v", dotenvF, err)
 	}
 	return Load(hostN, portN, userN, passN, dbN)
 }

@@ -2,9 +2,6 @@ package cli
 
 import "flag"
 
-// TODO: add a -logf flag, if it's empty create file
-// - this enables creating file in .sh, passing it and bypassing the InitLogger
-
 type Params struct {
 	EnvFile [2]string
 	Mode    [2]string // run mode e.g. build, daily, etc
