@@ -65,7 +65,7 @@ func SznPlayersETL(c *cnf.Conf, onlyCurrent, season string) error {
 		var cols []string = resp.ResultSets[0].Headers
 		var rows [][]any = resp.ResultSets[0].RowSet
 		// ProcessResp(resp)
-		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
+		// fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
 			c.Lg.Infof("response returned 0 rows, exiting")
@@ -116,7 +116,7 @@ func CrntPlayersETL(c *cnf.Conf) error {
 		var cols []string = resp.ResultSets[0].Headers
 		var rows [][]any = resp.ResultSets[0].RowSet
 		// ProcessResp(resp)
-		fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
+		// fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
 			c.Lg.Infof("response returned 0 rows, exiting")

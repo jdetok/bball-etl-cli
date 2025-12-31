@@ -37,7 +37,7 @@ func RunSeasonETL(c *cnf.Conf, startY, endY string) error {
 			return fmt.Errorf("error getting players for %s", s)
 		}
 
-		// get team and player game logs for the season
+		// get team and player game logcs for the season
 		err = GLogSeasonETL(c, s)
 		if err != nil {
 			return fmt.Errorf("error inserting data for %s: %v", s, err)

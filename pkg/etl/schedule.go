@@ -35,6 +35,7 @@ type LeagueSchedules struct {
 	N     LeagueSchedule
 	W     LeagueSchedule
 	LgMap map[string]map[string]bool
+	LgSzn map[string]string
 	NMap  map[string]bool
 	WMap  map[string]bool
 }
@@ -42,12 +43,13 @@ type LeagueSchedules struct {
 func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 	ls := &LeagueSchedules{
 		LgMap: make(map[string]map[string]bool),
+		LgSzn: make(map[string]string),
 	}
-	lgs := []string{"nba", "wnba"}
-	for _, lg := range lgs {
+	lgs := map[string]string{"nba": "00", "wnba": "10"}
+	for lgName, lgId := range lgs {
 
 		gr := get.GetReq{
-			Host:     fmt.Sprintf("cdn.%s.com", lg),
+			Host:     fmt.Sprintf("cdn.%s.com", lgName),
 			Headers:  get.HDRS,
 			Endpoint: "/static/json/staticData/scheduleLeagueV2.json",
 		}
@@ -55,6 +57,8 @@ func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 		if err != nil {
 			return nil, err
 		}
+		ls.LgSzn[lgId] = resp.Schedule.Szn
+		// fmt.Println("in cls:", ls.LgSzn)
 		if ls.LgMap[resp.Schedule.Lg] == nil {
 			ls.LgMap[resp.Schedule.Lg] = map[string]bool{}
 		}
@@ -82,6 +86,7 @@ func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 		// }
 		// fmt.Println(resp)
 	}
+	// fmt.Println("bottom cls:", ls.LgSzn)
 	return ls, nil
 }
 

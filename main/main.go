@@ -107,6 +107,13 @@ func main() {
 	app.Cnf.DB = db
 	app.Cnf.RowCnt = 0
 
+	if p.New[1] != "" {
+		if err := etl.DailyGamelogs(app.Cnf); err != nil {
+			app.Cnf.Lg.Fatalf("new dailygamelogs failed: %v", err)
+		}
+		os.Exit(0)
+	}
+
 	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
 	runMode := p.Mode[1]
 	if runMode == "email" {

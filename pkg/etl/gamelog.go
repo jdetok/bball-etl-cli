@@ -45,7 +45,7 @@ func GameLogReqNew(league, season, sType, plTm, dateFrom, dateTo string) get.Get
 			{"DateTo", dateTo},
 		},
 	}
-	fmt.Println("requesting gamelogs:", gr.MakeFulLURL())
+	// fmt.Println("requesting gamelogs:", gr.MakeFulLURL())
 	return gr
 }
 
