@@ -5,49 +5,123 @@ import (
 	"time"
 )
 
+type Arg struct {
+	Name        string
+	Desc        string
+	Default     string
+	DefaultBool bool
+	Value       string
+	ValueBool   bool
+	Dest        *string
+	DestBool    *bool
+}
+
 type CLIArgs struct {
-	EnvFile  string
-	Mode     string // run mode e.g. build, daily, etc
-	Logf     string // log file, if empty create one
-	Atch     string // log file, if empty create one
-	Szn      string // season selector, e.g. 2024 for 2024-25 NBA/2024 WNBA
-	Lg       string // league selector, nba or wnba
-	DateFrom string
-	DateTo   string
-	StartYr  string
-	EndYr    string
-	Tst      bool
-	New      bool
+	Envf     Arg
+	Mode     Arg // run mode e.g. build, daily, etc
+	Logf     Arg // log file, if empty create one
+	Atch     Arg // log file, if empty create one
+	Szn      Arg // season selector, e.g. 2024 for 2024-25 NBA/2024 WNBA
+	Lg       Arg // league selector, nba or wnba
+	DateFrom Arg
+	DateTo   Arg
+	StartYr  Arg
+	EndYr    Arg
+	Tst      Arg
+	New      Arg
+
+	ArgVals  []*Arg
+	ArgFlags []*Arg
 }
 
 func ParseArgs() *CLIArgs {
-	p := &CLIArgs{}
+	p := &CLIArgs{
+		Envf: Arg{
+			Name:    "envf",
+			Desc:    "specify .env file, pass '-envf skip' if environment variables already exist",
+			Default: ".env",
+		},
+		Mode: Arg{
+			Name:    "mode",
+			Desc:    "etl run mode",
+			Default: "daily",
+		},
+		Logf: Arg{
+			Name:    "logf",
+			Desc:    "log file, will log to command line if empty",
+			Default: "cli",
+		},
+		Atch: Arg{
+			Name: "attach",
+			Desc: "attach file (for email mode)",
+		},
+		Szn: Arg{
+			Name: "szn",
+			Desc: "nba/wnba season e.g. 2024",
+		},
+		Lg: Arg{
+			Name: "lg",
+			Desc: "specify nba or wnba (both by default)",
+		},
+		DateFrom: Arg{
+			Name: "dateFrom",
+			Desc: "start date for custom daily mode",
+		},
+		DateTo: Arg{
+			Name: "dateTo",
+			Desc: "end date for custom daily mode",
+		},
+		StartYr: Arg{
+			Name:    "startYear",
+			Desc:    "attach file (for email mode)",
+			Default: "1970",
+		},
+		EndYr: Arg{
+			Name:    "endYear",
+			Desc:    "attach file (for email mode)",
+			Default: time.Now().Format("2006"),
+		},
+		Tst: Arg{
+			Name:        "tst",
+			Desc:        "for dev use - only run tst func",
+			DefaultBool: false,
+		},
+		New: Arg{
+			Name:        "new",
+			Desc:        "for dev use - only run new func",
+			DefaultBool: false,
+		},
+	}
 
-	// env flag - determines whether an env file is read before loading env vars
-	flag.StringVar(&p.EnvFile, "envf", ".env",
-		"specify .env file, pass '-envf skip' if environment variables already exist")
+	p.ArgVals = []*Arg{
+		&p.Envf,
+		&p.Mode,
+		&p.Logf,
+		&p.Atch,
+		&p.Szn,
+		&p.Lg,
+		&p.DateFrom,
+		&p.DateTo,
+		&p.StartYr,
+		&p.EndYr,
+	}
 
-	// main run modes flag
-	flag.StringVar(&p.Mode, "mode", "daily", "etl run-mode")
+	p.ArgFlags = []*Arg{
+		&p.Tst,
+		&p.New,
+	}
 
-	flag.StringVar(&p.Logf, "logf", "cli", "log file, will log to command line if empty")
-	flag.StringVar(&p.Atch, "attach", "", "attach file (for email mode)")
+	for i := range p.ArgVals {
+		arg := p.ArgVals[i]
+		arg.Dest = &arg.Value
+		flag.StringVar(arg.Dest, arg.Name, arg.Default, arg.Desc)
+	}
 
-	// seasons for custom mode
-	flag.StringVar(&p.Szn, "szn", "", "nba/wnba season e.g. 2024")
-	flag.StringVar(&p.Lg, "lg", "", "nba or wnba")
-
-	// from/to dates for custom daily etl mode
-	flag.StringVar(&p.DateFrom, "datefrom", "", "date specfic fetch, used with -mode custom")
-	flag.StringVar(&p.DateTo, "dateto", "", "date specfic fetch, used with -mode custom")
-
-	// build mode start/end years
-	flag.StringVar(&p.StartYr, "startYear", "1970", "build mode start year")
-	flag.StringVar(&p.EndYr, "endYear", time.Now().Format("2006"), "build mode end year")
-
-	// tst/new flags - for development
-	flag.BoolVar(&p.Tst, "tst", false, "for dev/testing")
-	flag.BoolVar(&p.New, "new", false, "test new feature")
+	for i := range p.ArgFlags {
+		arg := p.ArgFlags[i]
+		arg.DestBool = &arg.ValueBool
+		flag.BoolVar(arg.DestBool, arg.Name, arg.DefaultBool, arg.Desc)
+	}
 
 	flag.Parse()
 	return p

@@ -41,18 +41,18 @@ func daily(r *RunMode) error {
 }
 
 func email(r *RunMode) error {
-	return emailLogFile(r.Cnf, r.Args.Atch, r.EmailUserVar, r.EmailPassVar, r.EmailHostVar, r.EmailPortVar)
+	return emailLogFile(r.Cnf, *r.Args.Atch.Dest, r.EmailUserVar, r.EmailPassVar, r.EmailHostVar, r.EmailPortVar)
 }
 
 func build(r *RunMode) error {
-	return etl.RunSeasonETL(r.Cnf, r.Args.StartYr, r.Args.EndYr)
+	return etl.RunSeasonETL(r.Cnf, *r.Args.StartYr.Dest, *r.Args.EndYr.Dest)
 }
 
 func custom(r *RunMode) error {
-	szn := r.Args.Szn
-	lg := r.Args.Lg
-	df := r.Args.DateFrom
-	dt := r.Args.DateTo
+	szn := *r.Args.Szn.Dest
+	lg := *r.Args.Lg.Dest
+	df := *r.Args.DateFrom.Dest
+	dt := *r.Args.DateTo.Dest
 
 	if szn == "" && df == "" && dt == "" {
 		return fmt.Errorf("a season or date must be specified in custom mode")

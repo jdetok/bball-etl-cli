@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// SETUP LOGGING
-	tmpLg, err := getLogWriter(meta.Args.Logf)
+	tmpLg, err := getLogWriter(meta.Args.Logf.Value)
 	if err != nil {
 		fmt.Println(fmt.Errorf("** fatal: failed to get io.Writer for logging: %v", err))
 		os.Exit(1)
@@ -47,7 +47,7 @@ func main() {
 	meta.Cnf.Lg = logd.NewLogd(tmpLg)
 
 	// load environment variables for database connection
-	pgEnv, err := loadDBEnv(meta.Args.EnvFile)
+	pgEnv, err := loadDBEnv(meta.Args.Envf.Value)
 	if err != nil {
 		meta.Cnf.Lg.Fatalf("failed to load env vars for DB connection: %v", err)
 	}
@@ -64,14 +64,14 @@ func main() {
 	modes := cli.BuildRunModes(meta)
 
 	// retrieve appropriate etl function from runmode map
-	fn, ok := modes[meta.Args.Mode]
+	fn, ok := modes[*meta.Args.Mode.Dest]
 	if !ok {
-		meta.Cnf.Lg.Fatalf("invalid mode: '%s' does not exist", meta.Args.Mode)
+		meta.Cnf.Lg.Fatalf("invalid mode: '%s' does not exist", meta.Args.Mode.Name)
 	}
 
 	// execute etl function from runmode map
 	if err := fn(meta); err != nil {
-		meta.Cnf.Lg.Fatalf("%s mode failed: %v", meta.Args.Mode, err)
+		meta.Cnf.Lg.Fatalf("%s mode failed: %v", meta.Args.Mode.Name, err)
 	}
 
 	// complete log
