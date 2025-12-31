@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
 	"github.com/jdetok/bball-etl-cli/pkg/get"
@@ -45,26 +44,26 @@ func GamelogParamsToReq(day string) (*ParamsToReq, error) {
 
 // run nightly (soon after all games conclude, usually around 00:30)
 // references league schedules endpoint to only run etl for season/lg active for date
-func DailyGamelogs(c *cnf.Conf) error {
-	yday := Yesterday(time.Now())
+func DailyGamelogs(c *cnf.Conf, date string) error {
+	// yday := Yesterday(time.Now())
 
-	p, err := GamelogParamsToReq(yday)
+	p, err := GamelogParamsToReq(date)
 	if err != nil {
 		return fmt.Errorf("error getting request parameters: %v", err)
 	}
 
 	c.Lg.Infof("fetching for %s: league(s): %v | season(s): %v, season type(s): %v",
-		yday, p.lgs, p.lgSznMap, p.sTypes)
+		date, p.lgs, p.lgSznMap, p.sTypes)
 
 	dbTargets := GamelogDBTargets()
 	for pt, tbl := range dbTargets {
 		for _, lg := range p.lgs {
 			for _, st := range p.sTypes {
 
-				resp, err := GamelogsByDate(c, lg, p.lgSznMap[lg], st, pt, yday, yday)
+				resp, err := GamelogsByDate(c, lg, p.lgSznMap[lg], st, pt, date, date)
 				if err != nil {
 					return fmt.Errorf("error getting gamelog\n| %s | %s | %s | %s | %s |\n%v",
-						lg, p.lgSznMap[lg], st, pt, yday, err)
+						lg, p.lgSznMap[lg], st, pt, date, err)
 				}
 				var cols []string = resp.ResultSets[0].Headers
 				var rows [][]any = resp.ResultSets[0].RowSet
@@ -86,7 +85,7 @@ func DailyGamelogs(c *cnf.Conf) error {
 			}
 		}
 	}
-	c.Lg.Infof("DailyGamelgs complete")
+	c.Lg.Infof("DailyGamelogs for %v complete", date)
 	return nil
 }
 
