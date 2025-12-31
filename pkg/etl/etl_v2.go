@@ -11,49 +11,60 @@ import (
 	"github.com/jdetok/bball-etl-cli/pkg/pgdb"
 )
 
-func DailyGamelogs(c *cnf.Conf) error {
-	yday := Yesterday(time.Now())
-	lgs, sTypes, lgSzns, err := func(yesterday string) ([]string, []string, map[string]string, error) {
-		lgs := []string{}
-		sTypes := []string{}
-		lgSched, err := GetCurrentLgSchedules()
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("error getting schedules: %v", err)
-		}
+type ParamsToReq struct {
+	lgs      []string
+	sTypes   []string
+	lgSznMap map[string]string
+}
 
-		tmpLgs := []string{"00", "10"}
-		for _, lg := range tmpLgs {
-			if lgSched.LgMap[lg] != nil {
-				if gmIsPlayoff, ok := lgSched.LgMap[lg][yesterday]; ok {
-					lgs = append(lgs, lg)
-					var sType string
-					if gmIsPlayoff {
-						sType = "Playoffs"
-					} else {
-						sType = "Regular+Season"
-					}
-					sTypes = append(sTypes, sType)
+func GamelogParamsToReq(day string) (*ParamsToReq, error) {
+	lgs := []string{}
+	sTypes := []string{}
+	lgSched, err := GetCurrentLgSchedules()
+	if err != nil {
+		return nil, fmt.Errorf("error getting schedules: %v", err)
+	}
+
+	tmpLgs := []string{"00", "10"}
+	for _, lg := range tmpLgs {
+		if lgSched.LgMap[lg] != nil {
+			if gmIsPlayoff, ok := lgSched.LgMap[lg][day]; ok {
+				lgs = append(lgs, lg)
+				var sType string
+				if gmIsPlayoff {
+					sType = "Playoffs"
+				} else {
+					sType = "Regular+Season"
 				}
+				sTypes = append(sTypes, sType)
 			}
 		}
-		return lgs, sTypes, lgSched.LgSzn, nil
-	}(yday)
+	}
+	return &ParamsToReq{lgs, sTypes, lgSched.LgSzn}, nil
+}
+
+// run nightly (soon after all games conclude, usually around 00:30)
+// references league schedules endpoint to only run etl for season/lg active for date
+func DailyGamelogs(c *cnf.Conf) error {
+	yday := Yesterday(time.Now())
+
+	p, err := GamelogParamsToReq(yday)
 	if err != nil {
 		return fmt.Errorf("error getting request parameters: %v", err)
 	}
 
 	c.Lg.Infof("fetching for %s: league(s): %v | season(s): %v, season type(s): %v",
-		yday, lgs, lgSzns, sTypes)
+		yday, p.lgs, p.lgSznMap, p.sTypes)
 
 	dbTargets := GamelogDBTargets()
 	for pt, tbl := range dbTargets {
-		for _, lg := range lgs {
-			for _, st := range sTypes {
+		for _, lg := range p.lgs {
+			for _, st := range p.sTypes {
 
-				resp, err := GamelogsByDate(c, lg, lgSzns[lg], st, pt, yday, yday)
+				resp, err := GamelogsByDate(c, lg, p.lgSznMap[lg], st, pt, yday, yday)
 				if err != nil {
 					return fmt.Errorf("error getting gamelog\n| %s | %s | %s | %s | %s |\n%v",
-						lg, lgSzns[lg], st, pt, yday, err)
+						lg, p.lgSznMap[lg], st, pt, yday, err)
 				}
 				var cols []string = resp.ResultSets[0].Headers
 				var rows [][]any = resp.ResultSets[0].RowSet
@@ -68,13 +79,12 @@ func DailyGamelogs(c *cnf.Conf) error {
 					cols,
 					rows,
 				)
-				if err := ins.InsertFast(c); err != nil {
+				if err := ins.Insert(c); err != nil {
 					return fmt.Errorf("error attempting to insert %d rows into %s: %v",
 						len(rows), tbl.Name, err)
 				}
 			}
 		}
-
 	}
 	c.Lg.Infof("DailyGamelgs complete")
 	return nil

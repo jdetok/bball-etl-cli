@@ -80,7 +80,7 @@ func SznPlayersETL(c *cnf.Conf, onlyCurrent, season string) error {
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(c)
+		ins.Insert(c)
 
 		c.Lg.Infof("%s %s players ETL complete", season, lg)
 	}
@@ -105,7 +105,6 @@ func CrntPlayersETL(c *cnf.Conf) error {
 		}
 
 		c.Lg.Infof("attempting to insert current %s players", lg)
-		// r := PlayerReq(onlyCurrent, p[0], p[1])
 		r := PlayerReq("1", pp.Lgs[i], szns[i])
 		resp, err := get.RequestResp(r)
 		if err != nil {
@@ -115,8 +114,6 @@ func CrntPlayersETL(c *cnf.Conf) error {
 		// get cols/rows from resp, return early when no rows in response
 		var cols []string = resp.ResultSets[0].Headers
 		var rows [][]any = resp.ResultSets[0].RowSet
-		// ProcessResp(resp)
-		// fmt.Println("Cols Length:", len(cols), "Rows Length:", len(rows))
 
 		if len(rows) == 0 {
 			c.Lg.Infof("response returned 0 rows, exiting")
@@ -131,7 +128,7 @@ func CrntPlayersETL(c *cnf.Conf) error {
 			cols,
 			rows,
 		) // attempt to insert rows from response
-		ins.InsertFast(c)
+		ins.Insert(c)
 
 		c.Lg.Infof("current %s players ETL complete", lg)
 	}

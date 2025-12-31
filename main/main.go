@@ -41,7 +41,7 @@ type App struct {
 
 func main() {
 	// parse flags
-	var p cli.Params = cli.ParseArgs() // get args passed - exit if 1 will be at least 2 if arg was passed
+	p := cli.ParseArgs() // get args passed - exit if 1 will be at least 2 if arg was passed
 	runArgs := os.Args
 	if len(runArgs) == 1 {
 		fmt.Println("fatal: an argument must be passed")
@@ -54,7 +54,7 @@ func main() {
 		DBConf:    pgdb.NewDBConf(PG_OPEN, PG_IDLE, PG_LIFE*time.Minute),
 	}
 
-	if p.Tst[1] != "" {
+	if p.Tst != "" {
 		sch, err := etl.GetCurrentLgSchedules()
 		if err != nil {
 			fmt.Println("failed to get schedules:", err)
@@ -73,7 +73,7 @@ func main() {
 	// otherwise, create new file
 	var tmpLg io.Writer
 	var lgErr error
-	logf := p.Logf[1]
+	logf := p.Logf
 	switch logf {
 	case "", "cli":
 		tmpLg, lgErr = logd.GetLogWriter(true, logf, "")
@@ -88,7 +88,7 @@ func main() {
 
 	var pgEnv *conn.DBEnv
 	var envErr error
-	var envF string = p.EnvFile[1]
+	var envF string = p.EnvFile
 	switch envF {
 	case "", "skip": // don't load a .env file (env vars already exist)
 		pgEnv, envErr = conn.Load(PG_HOSTN, PG_PORTN, PG_USERN, PG_PASSN, PG_DATAN)
@@ -107,7 +107,7 @@ func main() {
 	app.Cnf.DB = db
 	app.Cnf.RowCnt = 0
 
-	if p.New[1] != "" {
+	if p.New != "" {
 		if err := etl.DailyGamelogs(app.Cnf); err != nil {
 			app.Cnf.Lg.Fatalf("new dailygamelogs failed: %v", err)
 		}
@@ -115,9 +115,9 @@ func main() {
 	}
 
 	// RUN APPROPRIATE ETL PROCESS BASED ON FLAGS
-	runMode := p.Mode[1]
+	runMode := p.Mode
 	if runMode == "email" {
-		atch := p.Atch[1]
+		atch := p.Atch
 		if atch == "" {
 			app.Cnf.Lg.Fatalf("must pass an attachment in email mode")
 		}
@@ -158,10 +158,10 @@ func main() {
 		// "custom" run - a season MUST be specified, lg defaults to both
 	case "custom":
 		// exit if no season passed
-		szn := p.Szn[1]
-		lg := p.Lg[1]
-		df := p.DateFrom[1]
-		dt := p.DateTo[1]
+		szn := p.Szn
+		lg := p.Lg
+		df := p.DateFrom
+		dt := p.DateTo
 
 		if szn == "" && df == "" && dt == "" {
 			app.Cnf.Lg.Fatalf("a season or date must be specified in custom mode")

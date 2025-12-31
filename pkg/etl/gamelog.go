@@ -73,7 +73,7 @@ func GameLogETL(c *cnf.Conf, r get.GetReq, tbl, primKey string) error {
 		cols,
 		rows,
 	) // attempt to insert rows from response
-	return ins.InsertFast(c)
+	return ins.Insert(c)
 }
 
 // nightly game log fetch both PlayerTeam=P & T and NBA and WNBA

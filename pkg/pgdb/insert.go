@@ -97,9 +97,8 @@ func (ins *InsertStmnt) ChunkVals() {
 }
 
 // loop through the chunks & attempt to insert all rows from each one
-func (ins *InsertStmnt) InsertFast(cnf *cnf.Conf) error {
+func (ins *InsertStmnt) Insert(cnf *cnf.Conf) error {
 	var wg sync.WaitGroup
-	// var g errgroup.errgroup
 	var mu sync.Mutex
 	errCh := make(chan error, len(ins.Chunks))
 
@@ -117,12 +116,8 @@ func (ins *InsertStmnt) InsertFast(cnf *cnf.Conf) error {
 			ra, _ := res.RowsAffected()
 			mu.Lock()
 			cnf.RowCnt += ra // add rows affected to total
-			cnf.Lg.Infof(`
-+ chunk %d/%d complete | rowsets: %d | vals: %d
-++ %d new rows inserted into %s
-++ %d total rows affected
-++ duration: %v
-`, i+1, len(ins.Chunks), len(c), len(ValsFromSet(c)), ra, ins.Tbl, cnf.RowCnt, time.Since(st))
+			cnf.Lg.Infof("chunk %d/%d complete after %v | rowsets: %d | vals: %d\n++ %d new rows inserted into %s\n++ %d total rows affected",
+				i+1, len(ins.Chunks), time.Since(st), len(c), len(ValsFromSet(c)), ra, ins.Tbl, cnf.RowCnt)
 			mu.Unlock()
 			time.Sleep(1 * time.Second)
 		}(i, c)
@@ -132,22 +127,6 @@ func (ins *InsertStmnt) InsertFast(cnf *cnf.Conf) error {
 	if len(errCh) > 0 {
 		err := <-errCh
 		return fmt.Errorf("one or more chunks failed to insert: %v", err)
-	}
-	return nil
-}
-
-// loop through the chunks & attempt to insert all rows from each one
-func (ins *InsertStmnt) Insert(cnf *cnf.Conf) error {
-	for i, c := range ins.Chunks {
-		res, err := cnf.DB.Exec(ins.BuildStmnt(c), ValsFromSet(c)...)
-		if err != nil {
-			return fmt.Errorf("error inserting chunk %d/%d: %v", i+1, len(ins.Chunks), err)
-		}
-		ra, _ := res.RowsAffected()
-		cnf.RowCnt += ra // add rows affected to total
-		cnf.Lg.Infof(
-			"chunk %d/%d: rowsets: %d | vals: %d\n---- %d new rows inserted into %s\n---- total rows affected: %d",
-			i+1, len(ins.Chunks), len(c), len(ValsFromSet(c)), ra, ins.Tbl, cnf.RowCnt)
 	}
 	return nil
 }
