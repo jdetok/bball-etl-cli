@@ -77,7 +77,7 @@ func main() {
 
 	// execute etl function from runmode map
 	if err := fn(meta); err != nil {
-		meta.Cnf.Lg.Fatalf("%s mode failed: %v", meta.Args.Mode.Name, err)
+		meta.Cnf.Lg.Fatalf("%s mode failed: %v", meta.Args.Mode.Value, err)
 	}
 
 	// complete log

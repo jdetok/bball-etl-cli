@@ -29,7 +29,6 @@ type LgSeasons map[string][]string // i.e. ["00"][]string{"2024-25", "2025-26"}
 type LgSznDates map[string]map[string]map[string]bool // i.e. ["00"]["2025-26"]["12/25/2025"]false (nba game on the date, NOT a playoff game)
 
 func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
-
 	ls := LgSeasons{nba: []string{}, wnba: []string{}}
 
 	// convert string dates to time
@@ -47,38 +46,48 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 	y2 := int(dt.Year())
 	m2 := int(dt.Month())
 
+	// first seasons
 	switch {
-	case m1 < 5:
-		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y1-1, strconv.Itoa(y1)[2:]))
-		ls[wnba] = append(ls[wnba], strconv.Itoa(y1-1))
+	case m1 <= 5:
+		ls[nba] = appendIfNew(ls[nba], fmt.Sprintf("%d-%s", y1-1, strconv.Itoa(y1)[2:]))
+		ls[wnba] = appendIfNew(ls[wnba], strconv.Itoa(y1-1))
 	case m1 > 5 && m1 < 10:
-		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y1-1, strconv.Itoa(y1)[2:]))
-		ls[wnba] = append(ls[wnba], strconv.Itoa(y1))
-	case m1 > 10:
-		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y1, strconv.Itoa(y1 + 1)[2:]))
-		ls[wnba] = append(ls[wnba], strconv.Itoa(y1))
+		ls[nba] = appendIfNew(ls[nba], fmt.Sprintf("%d-%s", y1-1, strconv.Itoa(y1)[2:]))
+		ls[wnba] = appendIfNew(ls[wnba], strconv.Itoa(y1))
+	case m1 >= 10:
+		ls[nba] = appendIfNew(ls[nba], fmt.Sprintf("%d-%s", y1, strconv.Itoa(y1 + 1)[2:]))
+		ls[wnba] = appendIfNew(ls[wnba], strconv.Itoa(y1))
 	}
 
-	if y1 == y2 {
-		return ls, nil
-	}
-
+	// all seasons betweeen first and last
 	for i := y1; i < y2; i++ {
-		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", i, strconv.Itoa(i + 1)[2:]))
-		ls[wnba] = append(ls[wnba], strconv.Itoa(i+1))
+		nbaSzn := fmt.Sprintf("%d-%s", i, strconv.Itoa(i + 1)[2:])
+		wnbaSzn := strconv.Itoa(i + 1)
+		if ls[nba][len(ls[nba])-1] != nbaSzn {
+			ls[nba] = appendIfNew(ls[nba], nbaSzn)
+		}
+		if ls[wnba][len(ls[wnba])-1] != wnbaSzn {
+			ls[wnba] = appendIfNew(ls[wnba], wnbaSzn)
+		}
 	}
 
+	// last seasons
 	switch {
-	case m2 < 5:
-
-	case m2 > 5 && m2 < 10:
-		ls[wnba] = append(ls[wnba], strconv.Itoa(y2))
-	case m2 > 10:
-		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y2, strconv.Itoa(y2 + 1)[2:]))
-		ls[wnba] = append(ls[wnba], strconv.Itoa(y2))
+	case m2 < 10:
+		ls[nba] = appendIfNew(ls[nba], fmt.Sprintf("%d-%s", y2-1, strconv.Itoa(y2)[2:]))
+		ls[wnba] = appendIfNew(ls[wnba], strconv.Itoa(y2))
+	case m2 >= 10:
+		ls[nba] = appendIfNew(ls[nba], fmt.Sprintf("%d-%s", y2, strconv.Itoa(y2 + 1)[2:]))
+		ls[wnba] = appendIfNew(ls[wnba], strconv.Itoa(y2))
 	}
-
 	return ls, nil
+}
+
+func appendIfNew(s []string, v string) []string {
+	if len(s) == 0 || s[len(s)-1] != v {
+		return append(s, v)
+	}
+	return s
 }
 
 func GetManyLgSchedules(dateFrom, dateTo string) (LgSznDates, error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
@@ -48,7 +49,7 @@ func GamelogParamsToReq(day string) (*ParamsToReq, error) {
 	tmpLgs := []string{"00", "10"}
 	for _, lg := range tmpLgs {
 		if lgSched.LgMap[lg] != nil {
-			if gmIsPlayoff, ok := lgSched.LgMap[lg][day]; ok {
+			if gmIsPlayoff, ok := lgSched.LgMap[lg][day]; ok && !slices.Contains(lgs, lg) {
 				lgs = append(lgs, lg)
 				var sType string
 				if gmIsPlayoff {
@@ -56,7 +57,10 @@ func GamelogParamsToReq(day string) (*ParamsToReq, error) {
 				} else {
 					sType = "Regular+Season"
 				}
-				sTypes = append(sTypes, sType)
+				if !slices.Contains(sTypes, sType) {
+					sTypes = append(sTypes, sType)
+				}
+
 			}
 		}
 	}
@@ -119,7 +123,6 @@ func CustomGamelogsByDate(c *cnf.Conf, dateFrom, dateTo string) error {
 		for szn, dates := range szns {
 			var rsReqs []string
 			var plOffReqs []string
-			fmt.Println(dates)
 			for date, isPlOff := range dates {
 
 				if isPlOff {
@@ -146,44 +149,13 @@ func CustomGamelogsByDate(c *cnf.Conf, dateFrom, dateTo string) error {
 
 func GetPlTmGamelogs(c *cnf.Conf, dates []string, df, dt, lg, szn, sType string) error {
 	dateLayout := "01/02/2006"
-	minDt, err := time.Parse(dateLayout, df)
+	minStr, maxStr, err := getMinMaxDates(dateLayout, dates, df, dt)
 	if err != nil {
 		return err
 	}
 
-	maxDt, err := time.Parse(dateLayout, dt)
-	if err != nil {
-		return err
-	}
-
-	var min, max time.Time
-	for i, d := range dates {
-		t, err := time.Parse(dateLayout, d)
-		if err != nil {
-			return err
-		}
-
-		if t.Year() == minDt.Year() {
-			min = minDt
-		}
-
-		if t.Year() == maxDt.Year() {
-			max = maxDt
-		}
-
-		if i == 0 || t.Before(min) {
-			min = t
-		}
-		if i == 0 || t.After(max) {
-			max = t
-		}
-	}
-	minStr := min.Format(dateLayout)
-	maxStr := max.Format(dateLayout)
-	fmt.Println(dates)
-	fmt.Println("min:", minStr, "max:", maxStr)
-	for _, pt := range []string{"P", "T"} {
-		resp, err := GamelogsByDate(c, lg, szn, "Regular+Season", pt, minStr, maxStr)
+	for pt, tbl := range GamelogDBTargets() {
+		resp, err := GamelogsByDate(c, lg, szn, sType, pt, minStr, maxStr)
 		if err != nil {
 			return err
 		}
@@ -193,17 +165,17 @@ func GetPlTmGamelogs(c *cnf.Conf, dates []string, df, dt, lg, szn, sType string)
 			c.Lg.Infof("response returned 0 rows, exiting")
 			return nil
 		}
-		dbTargets := GamelogDBTargets()
+		// dbTargets := GamelogDBTargets()
 		c.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
 		ins := pgdb.MakeInsert(
-			dbTargets[pt].Name,
-			dbTargets[pt].PrimKey,
+			tbl.Name,
+			tbl.PrimKey,
 			cols,
 			rows,
 		)
 		if err := ins.Insert(c); err != nil {
 			return fmt.Errorf("error attempting to insert %d rows into %s: %v",
-				len(rows), dbTargets[pt].Name, err)
+				len(rows), tbl.Name, err)
 		}
 	}
 	return nil
@@ -231,6 +203,43 @@ func GamelogsByDate(c *cnf.Conf, lg, szn, sType, pt, df, dt string) (*RespGamelo
 		return nil, fmt.Errorf("error unmarshaling json body: %v", err)
 	}
 	return resp, nil
+}
+
+func getMinMaxDates(layout string, dates []string, df, dt string) (string, string, error) {
+	minDt, err := time.Parse(dateLayout, df)
+	if err != nil {
+		return "", "", err
+	}
+
+	maxDt, err := time.Parse(dateLayout, dt)
+	if err != nil {
+		return "", "", err
+	}
+
+	var min, max time.Time
+	for i, d := range dates {
+		t, err := time.Parse(dateLayout, d)
+		if err != nil {
+			return "", "", err
+		}
+
+		if t.Year() == minDt.Year() {
+			min = minDt
+		}
+
+		if t.Year() == maxDt.Year() {
+			max = maxDt
+		}
+
+		if i == 0 || t.Before(min) {
+			min = t
+		}
+		if i == 0 || t.After(max) {
+			max = t
+		}
+	}
+
+	return min.Format(layout), max.Format(layout), nil
 }
 
 func NewReqMeta(lg, szn, sType, plTm, df, dt string) *get.ReqestMeta {

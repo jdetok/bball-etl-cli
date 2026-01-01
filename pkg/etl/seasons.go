@@ -17,14 +17,23 @@ func Yesterday(dt time.Time) string {
 }
 
 func SznBSlice(start, end string) ([]string, error) {
-	startYr, errS := strconv.Atoi(start)
-	endYr, errE := strconv.Atoi(end)
-	numY := endYr - startYr
-
-	if errS != nil || errE != nil {
-		return nil, fmt.Errorf("error converting start or end year to int")
+	startYr, err := strconv.Atoi(start)
+	if err != nil {
+		return nil, err
 	}
-
+	endYr, err := strconv.Atoi(end)
+	if err != nil {
+		return nil, err
+	}
+	numY := endYr - startYr
+	if numY < 0 {
+		numY = startYr - endYr
+	}
+	if numY == 0 {
+		return []string{
+			strconv.Itoa(startYr),
+		}, nil
+	}
 	var szns []string
 	for y := numY; y > 0; y-- {
 		szns = append(szns,

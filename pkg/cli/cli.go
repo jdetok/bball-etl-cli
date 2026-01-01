@@ -3,6 +3,8 @@ package cli
 import (
 	"flag"
 	"time"
+
+	"github.com/jdetok/bball-etl-cli/pkg/etl"
 )
 
 type Arg struct {
@@ -79,7 +81,8 @@ func ParseArgs() *CLIArgs {
 		EndYr: Arg{
 			Name:    "endYear",
 			Desc:    "attach file (for email mode)",
-			Default: time.Now().Format("2006"),
+			Default: etl.CurrentSzns(time.Now())[0][:4],
+			// Default: time.Now().Format("2006"),
 		},
 		Tst: Arg{
 			Name:        "tst",

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
@@ -32,6 +33,8 @@ func BuildRunModes(r *RunMode) map[string]modeFn {
 		"d":      func(*RunMode) error { return daily(r) },
 		"email":  func(*RunMode) error { return email(r) },
 		"build":  func(*RunMode) error { return build(r) },
+		"szn":    func(*RunMode) error { return season(r) },
+		"season": func(*RunMode) error { return season(r) },
 		"custom": func(*RunMode) error { return custom(r) },
 		"tst":    func(*RunMode) error { return tst(r) },
 	}
@@ -48,7 +51,20 @@ func email(r *RunMode) error {
 func build(r *RunMode) error {
 	return etl.RunSeasonETL(r.Cnf, *r.Args.StartYr.Dest, *r.Args.EndYr.Dest)
 }
+func season(r *RunMode) error {
+	var startYr string
+	if *r.Args.StartYr.Dest != startYr {
+		startYr = *r.Args.StartYr.Dest
+	} else {
+		if time.Now().Month() >= 10 {
+			startYr = strconv.Itoa(time.Now().Year())
+		} else {
+			startYr = strconv.Itoa(time.Now().Year() - 1)
+		}
 
+	}
+	return etl.RunSeasonETL(r.Cnf, startYr, *r.Args.EndYr.Dest)
+}
 func tst(_ *RunMode) error {
 	return etl.Tst()
 }

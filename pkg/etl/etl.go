@@ -25,7 +25,7 @@ func RunNightlyETL(c *cnf.Conf, df, dt string) error {
 func RunSeasonETL(c *cnf.Conf, startY, endY string) error {
 	szns, err := SznBSlice(startY, endY)
 	if err != nil {
-		return fmt.Errorf("error making seasons string")
+		return fmt.Errorf("error making seasons string: %v", err)
 	}
 
 	for _, s := range szns {
@@ -34,7 +34,7 @@ func RunSeasonETL(c *cnf.Conf, startY, endY string) error {
 
 		// players etl for season
 		if err := SznPlayersETL(c, "1", s); err != nil {
-			return fmt.Errorf("error getting players for %s", s)
+			return fmt.Errorf("error getting players for %s: %v", s, err)
 		}
 
 		// get team and player game logcs for the season
