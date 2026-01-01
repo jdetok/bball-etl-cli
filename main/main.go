@@ -48,27 +48,27 @@ func main() {
 
 	meta.Cnf.Lg.Infof("logger configured successfully")
 
-	// load environment variables for database connection
-	pgEnv, err := loadDBEnv(meta.Args.Envf.Value)
-	if err != nil {
-		meta.Cnf.Lg.Fatalf("failed to load env vars for DB connection: %v", err)
-	}
-
-	// setup database connection
-	db, err := pgdb.NewPGConn(pgEnv, pgdb.NewDBConf(PG_OPEN, PG_IDLE, PG_LIFE*time.Minute))
-	if err != nil {
-		meta.Cnf.Lg.Fatalf("failed to establish postgres connection: %v", err)
-	}
-	meta.Cnf.DB = db
-	meta.Cnf.RowCnt = 0
-
-	meta.Cnf.Lg.Infof("database connected successfully")
-
 	// build run modes map
 	modes := cli.BuildRunModes(meta)
 
 	meta.Cnf.Lg.Infof("run mode: %s", meta.Args.Mode.Value)
+	if meta.Args.Mode.Value != "email" {
+		// load environment variables for database connection
+		pgEnv, err := loadDBEnv(meta.Args.Envf.Value)
+		if err != nil {
+			meta.Cnf.Lg.Fatalf("failed to load env vars for DB connection: %v", err)
+		}
 
+		// setup database connection
+		db, err := pgdb.NewPGConn(pgEnv, pgdb.NewDBConf(PG_OPEN, PG_IDLE, PG_LIFE*time.Minute))
+		if err != nil {
+			meta.Cnf.Lg.Fatalf("failed to establish postgres connection: %v", err)
+		}
+		meta.Cnf.DB = db
+		meta.Cnf.RowCnt = 0
+
+		meta.Cnf.Lg.Infof("database connected successfully")
+	}
 	// retrieve appropriate etl function from runmode map
 	fn, ok := modes[*meta.Args.Mode.Dest]
 	if !ok {
