@@ -25,7 +25,7 @@ var wnba string = "10"
 
 type LgSeasons map[string][]string // i.e. ["00"][]string{"2024-25", "2025-26"}
 
-type LgGameTypeMap map[string]map[string]bool // i.e. ["00"]["12/25/2025"]false (nba game on the date, NOT a playoff game)
+type LgSznDates map[string]map[string]map[string]bool // i.e. ["00"]["2025-26"]["12/25/2025"]false (nba game on the date, NOT a playoff game)
 
 func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 	datefmt := "01/06/2006"
@@ -77,7 +77,7 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 	return ls, nil
 }
 
-func GetManyLgSchedules(dateFrom, dateTo string) (LgGameTypeMap, error) {
+func GetManyLgSchedules(dateFrom, dateTo string) (LgSznDates, error) {
 	lgSzns, err := NewLgSeasonsMap(dateFrom, dateTo)
 	if err != nil {
 		return nil, err
@@ -85,12 +85,18 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgGameTypeMap, error) {
 
 	fmt.Println(lgSzns)
 
-	lgSchedMap := LgGameTypeMap{}
+	lgSchedMap := LgSznDates{}
 
 	for lg, szns := range lgSzns {
+		if lgSchedMap[lg] == nil {
+			lgSchedMap[lg] = map[string]map[string]bool{}
+		}
 		for i, szn := range szns {
+			if lgSchedMap[lg][szn] == nil {
+				lgSchedMap[lg][szn] = map[string]bool{}
+			}
 			// req goes here
-			fmt.Printf("req %d/%d: lg {%s} szn {%s}\n", i+1, len(szns)*len(lgSzns), lg, szn)
+			fmt.Printf("req %d/%d for lg {%s} | szn {%s}...", i+1, len(szns), lg, szn)
 			rm := get.NewRequest(
 				get.HOST, "/stats/scheduleleaguev2", get.HDRMAP,
 				map[string]string{
@@ -107,15 +113,11 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgGameTypeMap, error) {
 			if err != nil {
 				return nil, fmt.Errorf("error getting response: %v", err)
 			}
-
+			fmt.Println(len(body), "bytes received from", rm.Endpt)
 			resp := &RespSched{}
 
 			if err := json.Unmarshal(body, &resp); err != nil {
 				return nil, fmt.Errorf("error unmarshaling json body: %v", err)
-			}
-
-			if lgSchedMap[lg] == nil {
-				lgSchedMap[lg] = map[string]bool{}
 			}
 
 			for ig := range resp.Schedule.Dates {
@@ -131,7 +133,7 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgGameTypeMap, error) {
 					return nil, err
 				}
 				gdate.Date = dt.Format("01/02/2006")
-				lgSchedMap[lg][gdate.Date] = gdate.IsPlayoff
+				lgSchedMap[lg][szn][gdate.Date] = gdate.IsPlayoff
 
 			}
 		}

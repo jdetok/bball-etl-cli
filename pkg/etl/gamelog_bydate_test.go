@@ -17,6 +17,13 @@ func TestGetManyLgSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(len(ls["00"]))
-	fmt.Println(len(ls["10"]))
+
+	for lg, szns := range ls {
+		for szn, sznMap := range szns {
+			fmt.Printf("lg {%s} szn {%v} dates: %d\n", lg, szn, len(sznMap))
+		}
+	}
+
+	// fmt.Println(len(ls["00"]))
+	// fmt.Println(len(ls["10"]))
 }
