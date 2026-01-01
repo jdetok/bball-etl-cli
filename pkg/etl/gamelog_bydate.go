@@ -90,7 +90,7 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgGameTypeMap, error) {
 	for lg, szns := range lgSzns {
 		for i, szn := range szns {
 			// req goes here
-			fmt.Printf("req %d/%d: lg {%s} szn {%s}\n", i+1, len(szns), lg, szn)
+			fmt.Printf("req %d/%d: lg {%s} szn {%s}\n", i+1, len(szns)*len(lgSzns), lg, szn)
 			rm := get.NewRequest(
 				get.HOST, "/stats/scheduleleaguev2", get.HDRMAP,
 				map[string]string{
