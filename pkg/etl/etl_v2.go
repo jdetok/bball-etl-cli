@@ -110,6 +110,104 @@ func DailyGamelogs(c *cnf.Conf, date string) error {
 	return nil
 }
 
+func CustomGamelogsByDate(c *cnf.Conf, dateFrom, dateTo string) error {
+	lgSchedules, err := GetManyLgSchedules(dateFrom, dateTo)
+	if err != nil {
+		return err
+	}
+	for lg, szns := range lgSchedules {
+		for szn, dates := range szns {
+			var rsReqs []string
+			var plOffReqs []string
+			fmt.Println(dates)
+			for date, isPlOff := range dates {
+
+				if isPlOff {
+					plOffReqs = append(plOffReqs, date)
+				} else {
+					rsReqs = append(rsReqs, date)
+				}
+				if len(rsReqs) > 0 {
+					if err := GetPlTmGamelogs(c, rsReqs, dateFrom, dateTo, lg, szn, "Regular+Season"); err != nil {
+						return err
+					}
+				}
+				if len(plOffReqs) > 0 {
+					if err := GetPlTmGamelogs(c, plOffReqs, dateFrom, dateTo, lg, szn, "Playoffs"); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func GetPlTmGamelogs(c *cnf.Conf, dates []string, df, dt, lg, szn, sType string) error {
+	dateLayout := "01/02/2006"
+	minDt, err := time.Parse(dateLayout, df)
+	if err != nil {
+		return err
+	}
+
+	maxDt, err := time.Parse(dateLayout, dt)
+	if err != nil {
+		return err
+	}
+
+	var min, max time.Time
+	for i, d := range dates {
+		t, err := time.Parse(dateLayout, d)
+		if err != nil {
+			return err
+		}
+
+		if t.Year() == minDt.Year() {
+			min = minDt
+		}
+
+		if t.Year() == maxDt.Year() {
+			max = maxDt
+		}
+
+		if i == 0 || t.Before(min) {
+			min = t
+		}
+		if i == 0 || t.After(max) {
+			max = t
+		}
+	}
+	minStr := min.Format(dateLayout)
+	maxStr := max.Format(dateLayout)
+	fmt.Println(dates)
+	fmt.Println("min:", minStr, "max:", maxStr)
+	for _, pt := range []string{"P", "T"} {
+		resp, err := GamelogsByDate(c, lg, szn, "Regular+Season", pt, minStr, maxStr)
+		if err != nil {
+			return err
+		}
+		var cols []string = resp.ResultSets[0].Headers
+		var rows [][]any = resp.ResultSets[0].RowSet
+		if len(rows) == 0 {
+			c.Lg.Infof("response returned 0 rows, exiting")
+			return nil
+		}
+		dbTargets := GamelogDBTargets()
+		c.Lg.Infof("response returned %d fields & %d rows", len(cols), len(rows))
+		ins := pgdb.MakeInsert(
+			dbTargets[pt].Name,
+			dbTargets[pt].PrimKey,
+			cols,
+			rows,
+		)
+		if err := ins.Insert(c); err != nil {
+			return fmt.Errorf("error attempting to insert %d rows into %s: %v",
+				len(rows), dbTargets[pt].Name, err)
+		}
+	}
+	return nil
+}
+
 func GamelogsByDate(c *cnf.Conf, lg, szn, sType, pt, df, dt string) (*RespGamelogs, error) {
 	rm := NewReqMeta(lg, szn, sType, pt, df, dt)
 

@@ -22,22 +22,22 @@ import (
 */
 var nba string = "00"
 var wnba string = "10"
+var dateLayout string = "01/02/2006"
 
 type LgSeasons map[string][]string // i.e. ["00"][]string{"2024-25", "2025-26"}
 
 type LgSznDates map[string]map[string]map[string]bool // i.e. ["00"]["2025-26"]["12/25/2025"]false (nba game on the date, NOT a playoff game)
 
 func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
-	datefmt := "01/06/2006"
 
 	ls := LgSeasons{nba: []string{}, wnba: []string{}}
 
 	// convert string dates to time
-	df, err := time.Parse(datefmt, dateFrom)
+	df, err := time.Parse(dateLayout, dateFrom)
 	if err != nil {
 		return nil, err
 	}
-	dt, err := time.Parse(datefmt, dateTo)
+	dt, err := time.Parse(dateLayout, dateTo)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +57,10 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 	case m1 > 10:
 		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y1, strconv.Itoa(y1 + 1)[2:]))
 		ls[wnba] = append(ls[wnba], strconv.Itoa(y1))
+	}
+
+	if y1 == y2 {
+		return ls, nil
 	}
 
 	for i := y1; i < y2; i++ {
@@ -79,6 +83,16 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 
 func GetManyLgSchedules(dateFrom, dateTo string) (LgSznDates, error) {
 	lgSzns, err := NewLgSeasonsMap(dateFrom, dateTo)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert string dates to time
+	d1, err := time.Parse(dateLayout, dateFrom)
+	if err != nil {
+		return nil, err
+	}
+	d2, err := time.Parse(dateLayout, dateTo)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +146,13 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgSznDates, error) {
 				if err != nil {
 					return nil, err
 				}
+
+				if dt.Before(d1) || dt.After(d2) {
+					fmt.Println(d1, "|", dt)
+					fmt.Println(d2, "|", dt)
+					continue
+				}
+
 				gdate.Date = dt.Format("01/02/2006")
 				lgSchedMap[lg][szn][gdate.Date] = gdate.IsPlayoff
 
