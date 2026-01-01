@@ -30,17 +30,16 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 	if err != nil {
 		return nil, err
 	}
-	// dt, err := time.Parse(datefmt, dateTo)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// get all the years in the range
-	// if the month of the start/end years is < 5, only include the earlier year
-	// nbaSzns := []string{}
+	dt, err := time.Parse(datefmt, dateTo)
+	if err != nil {
+		return nil, err
+	}
 
 	y1 := int(df.Year())
 	m1 := int(df.Month())
+	y2 := int(dt.Year())
+	m2 := int(dt.Month())
+
 	switch {
 	case m1 < 5:
 		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y1-1, strconv.Itoa(y1)[2:]))
@@ -53,9 +52,20 @@ func NewLgSeasonsMap(dateFrom, dateTo string) (LgSeasons, error) {
 		ls[wnba] = append(ls[wnba], strconv.Itoa(y1))
 	}
 
-	fmt.Println(ls)
+	for i := y1; i < y2; i++ {
+		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", i, strconv.Itoa(i + 1)[2:]))
+		ls[wnba] = append(ls[wnba], strconv.Itoa(i+1))
+	}
 
-	return nil, nil
+	switch {
+	case m2 < 5:
 
-	// covnert times back to strings
+	case m2 > 5 && m2 < 10:
+		ls[wnba] = append(ls[wnba], strconv.Itoa(y2))
+	case m2 > 10:
+		ls[nba] = append(ls[nba], fmt.Sprintf("%d-%s", y2, strconv.Itoa(y2 + 1)[2:]))
+		ls[wnba] = append(ls[wnba], strconv.Itoa(y2))
+	}
+
+	return ls, nil
 }
