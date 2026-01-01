@@ -33,6 +33,7 @@ func BuildRunModes(r *RunMode) map[string]modeFn {
 		"email":  func(*RunMode) error { return email(r) },
 		"build":  func(*RunMode) error { return build(r) },
 		"custom": func(*RunMode) error { return custom(r) },
+		"tst":    func(*RunMode) error { return tst(r) },
 	}
 }
 
@@ -48,6 +49,10 @@ func build(r *RunMode) error {
 	return etl.RunSeasonETL(r.Cnf, *r.Args.StartYr.Dest, *r.Args.EndYr.Dest)
 }
 
+func tst(_ *RunMode) error {
+	return etl.Tst()
+}
+
 func custom(r *RunMode) error {
 	szn := *r.Args.Szn.Dest
 	lg := *r.Args.Lg.Dest
@@ -60,7 +65,8 @@ func custom(r *RunMode) error {
 
 	if df != "" || dt != "" {
 		updateDfDt(&df, &dt)
-		return etl.RunNightlyETL(r.Cnf, df, dt)
+		return etl.DailyGamelogs(r.Cnf, df)
+		// return etl.RunNightlyETL(r.Cnf, df, dt)
 	}
 
 	switch lg {

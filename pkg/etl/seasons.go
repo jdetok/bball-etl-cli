@@ -36,30 +36,8 @@ func SznBSlice(start, end string) ([]string, error) {
 	return szns, nil
 }
 
-func SznSlice(start, end string) ([]string, error) {
-	startYr, errS := strconv.Atoi(start)
-	endYr, errE := strconv.Atoi(end)
-	numY := endYr - startYr
-
-	if errS != nil || errE != nil {
-		return nil, fmt.Errorf("error converting start or end year to int")
-	}
-
-	var szns []string
-	for y := range numY {
-		szns = append(szns,
-			fmt.Sprintf(
-				"%d-%s", startYr+y, strconv.Itoa(startYr + (y + 1))[2:]),
-		)
-	}
-	szns = append(szns, fmt.Sprintf("%d-%s", endYr, strconv.Itoa(endYr + 1)[2:]))
-	return szns, nil
-}
-
-/*
-returns slice of season strings for date (generally pass time.Now())
-calling in 2025 will return 2024-25 and 2025-26 and so on
-*/
+// returns slice of season strings for date (generally pass time.Now())
+// calling in 2025 will return 2024-25 and 2025-26 and so on
 func CurrentSzns(dt time.Time) []string {
 	var cyyy string = dt.Format("2006")
 	var cy string = dt.AddDate(1, 0, 0).Format("06")
@@ -99,4 +77,33 @@ func GetSeasons() SeasonLeague {
 
 	// fmt.Printf("NBA Season: %s | WNBA Season: %s\n", sl.Szn, sl.WSzn)
 	return sl
+}
+
+func GetSeasonsFromDate(date time.Time) (*SeasonLeague, error) {
+	sl := &SeasonLeague{}
+
+	var szns []string = CurrentSzns(date)
+
+	m, err := strconv.Atoi(date.Format("1"))
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// beginning of year through april
+	sl.Szn = szns[0]
+	sl.WSzn = szns[0]
+
+	// may through september
+	if m > 5 && m < 10 {
+		sl.WSzn = szns[1]
+	}
+
+	// october through end of year
+	if m > 10 {
+		sl.Szn = szns[1]
+		sl.WSzn = szns[1]
+	}
+
+	// fmt.Printf("NBA Season: %s | WNBA Season: %s\n", sl.Szn, sl.WSzn)
+	return sl, nil
 }

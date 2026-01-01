@@ -46,6 +46,8 @@ func main() {
 	}
 	meta.Cnf.Lg = logd.NewLogd(tmpLg)
 
+	meta.Cnf.Lg.Infof("logger configured successfully")
+
 	// load environment variables for database connection
 	pgEnv, err := loadDBEnv(meta.Args.Envf.Value)
 	if err != nil {
@@ -60,8 +62,12 @@ func main() {
 	meta.Cnf.DB = db
 	meta.Cnf.RowCnt = 0
 
+	meta.Cnf.Lg.Infof("database connected successfully")
+
 	// build run modes map
 	modes := cli.BuildRunModes(meta)
+
+	meta.Cnf.Lg.Infof("run mode: %s", meta.Args.Mode.Value)
 
 	// retrieve appropriate etl function from runmode map
 	fn, ok := modes[*meta.Args.Mode.Dest]

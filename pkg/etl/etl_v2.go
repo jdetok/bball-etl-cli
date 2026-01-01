@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/cnf"
 	"github.com/jdetok/bball-etl-cli/pkg/get"
@@ -16,13 +17,33 @@ type ParamsToReq struct {
 	lgSznMap map[string]string
 }
 
+func Tst() error {
+	sl, err := GetSeasonsFromDate(time.Now())
+	if err != nil {
+		return err
+	}
+	// sl := GetSeasons()
+	fmt.Println(sl.Szn)
+	fmt.Println(sl.WSzn)
+	return nil
+}
+
 func GamelogParamsToReq(day string) (*ParamsToReq, error) {
 	lgs := []string{}
 	sTypes := []string{}
-	lgSched, err := GetCurrentLgSchedules()
+	// get day as time
+
+	d, err := time.Parse("01/02/2006", day)
+	if err != nil {
+		return nil, err
+	}
+
+	lgSched, err := GetLgSchedules(d)
 	if err != nil {
 		return nil, fmt.Errorf("error getting schedules: %v", err)
 	}
+
+	fmt.Println("schedules for", d)
 
 	tmpLgs := []string{"00", "10"}
 	for _, lg := range tmpLgs {

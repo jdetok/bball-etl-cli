@@ -60,9 +60,15 @@ func (rm *ReqestMeta) MakeQueryStr(order []string) string {
 		url = url + fmt.Sprintf("%s=%s&", param, rm.Params[param])
 	}
 
-	// for k, v := range rm.Params {
-	// 	url = url + fmt.Sprintf("%s=%s&", k, v)
-	// }
+	return url[0 : len(url)-1]
+}
+
+func (rm *ReqestMeta) MakeUQueryStr() string {
+	var url string = fmt.Sprintf("https://%s%s?", rm.Host, rm.Endpt)
+
+	for k, v := range rm.Params {
+		url = url + fmt.Sprintf("%s=%s&", k, v)
+	}
 	return url[0 : len(url)-1]
 }
 

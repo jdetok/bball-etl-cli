@@ -3,6 +3,7 @@ package etl
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jdetok/bball-etl-cli/pkg/get"
@@ -40,25 +41,47 @@ type LeagueSchedules struct {
 	WMap  map[string]bool
 }
 
-func GetCurrentLgSchedules() (*LeagueSchedules, error) {
+func GetLgSchedules(date time.Time) (*LeagueSchedules, error) {
+	sl, err := GetSeasonsFromDate(date)
+	if err != nil {
+		return nil, err
+	}
+
 	ls := &LeagueSchedules{
 		LgMap: make(map[string]map[string]bool),
 		LgSzn: make(map[string]string),
 	}
-	lgs := map[string]string{"nba": "00", "wnba": "10"}
-	for lgName, lgId := range lgs {
 
-		gr := get.GetReq{
-			Host:     fmt.Sprintf("cdn.%s.com", lgName),
-			Headers:  get.HDRS,
-			Endpoint: "/static/json/staticData/scheduleLeagueV2.json",
-		}
-		resp, err := RequestSchedule(gr)
+	ls.LgSzn["00"] = sl.Szn
+	ls.LgSzn["10"] = sl.WSzn
+
+	lgs := map[string]string{"nba": "00", "wnba": "10"}
+	for _, lgId := range lgs {
+
+		rm := get.NewRequest(
+			get.HOST, "/stats/scheduleleaguev2", get.HDRMAP,
+			map[string]string{
+				"LeagueID": lgId,
+				"Season":   ls.LgSzn[lgId],
+			},
+		)
+		rm.URL = rm.MakeUQueryStr()
+		req, err := http.NewRequest(http.MethodGet, rm.URL, nil)
+
+		rm.AddHeaders(req)
+
+		body, err := get.RespFromClient(req)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting response: %v", err)
 		}
-		ls.LgSzn[lgId] = resp.Schedule.Szn
-		// fmt.Println("in cls:", ls.LgSzn)
+
+		resp := &RespSched{}
+
+		if err := json.Unmarshal(body, &resp); err != nil {
+			return nil, fmt.Errorf("error unmarshaling json body: %v", err)
+		}
+
+		// ls.LgSzn[lgId] = resp.Schedule.Szn
 		if ls.LgMap[resp.Schedule.Lg] == nil {
 			ls.LgMap[resp.Schedule.Lg] = map[string]bool{}
 		}
@@ -78,33 +101,52 @@ func GetCurrentLgSchedules() (*LeagueSchedules, error) {
 			gdate.Date = dt.Format("01/02/2006")
 			ls.LgMap[resp.Schedule.Lg][gdate.Date] = gdate.IsPlayoff
 		}
-		// switch lg {
-		// case "nba":
-		// 	ls.N = resp.Schedule
-		// case "wnba":
-		// 	ls.W = resp.Schedule
-		// }
-		// fmt.Println(resp)
 	}
-	// fmt.Println("bottom cls:", ls.LgSzn)
 	return ls, nil
 }
 
-func SchedReq(league, season string) get.GetReq {
-	var gr = get.GetReq{
-		Host:     get.HOST,
-		Headers:  get.HDRS,
-		Endpoint: "/stats/scheduleleaguev2",
-		Params: []get.Pair{
-			{"LeagueID", league},
-			{"Season", season},
-		},
+func GetCurrentLgSchedules() (*LeagueSchedules, error) {
+	ls := &LeagueSchedules{
+		LgMap: make(map[string]map[string]bool),
+		LgSzn: make(map[string]string),
 	}
-	return gr
+	lgs := map[string]string{"nba": "00", "wnba": "10"}
+	for lgName, lgId := range lgs {
+
+		gr := get.GetReq{
+			Host:     fmt.Sprintf("cdn.%s.com", lgName),
+			Headers:  get.HDRS,
+			Endpoint: "/static/json/staticData/scheduleLeagueV2.json",
+		}
+		resp, err := RequestSchedule(gr)
+		if err != nil {
+			return nil, err
+		}
+		ls.LgSzn[lgId] = resp.Schedule.Szn
+		if ls.LgMap[resp.Schedule.Lg] == nil {
+			ls.LgMap[resp.Schedule.Lg] = map[string]bool{}
+		}
+		for i := range resp.Schedule.Dates {
+			gdate := &resp.Schedule.Dates[i]
+			switch gdate.Games[0].Label {
+			case "", "Preseason":
+				gdate.IsPlayoff = false
+			default: // NEED TO HARDEN THIS
+				gdate.IsPlayoff = true
+			}
+
+			dt, err := time.Parse("01/02/2006 15:04:05", gdate.GDate)
+			if err != nil {
+				return nil, err
+			}
+			gdate.Date = dt.Format("01/02/2006")
+			ls.LgMap[resp.Schedule.Lg][gdate.Date] = gdate.IsPlayoff
+		}
+	}
+	return ls, nil
 }
 
 func RequestSchedule(gr get.GetReq) (*RespSched, error) {
-	// fmt.Printf("requesting data from %s...\n", gr.Endpoint)
 	body, err := gr.BodyFromReq()
 	if err != nil {
 		return nil, fmt.Errorf("error getting schedule response: %v", err)
