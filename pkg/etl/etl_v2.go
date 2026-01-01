@@ -127,15 +127,16 @@ func CustomGamelogsByDate(c *cnf.Conf, dateFrom, dateTo string) error {
 				} else {
 					rsReqs = append(rsReqs, date)
 				}
-				if len(rsReqs) > 0 {
-					if err := GetPlTmGamelogs(c, rsReqs, dateFrom, dateTo, lg, szn, "Regular+Season"); err != nil {
-						return err
-					}
+
+			}
+			if len(rsReqs) > 0 {
+				if err := GetPlTmGamelogs(c, rsReqs, dateFrom, dateTo, lg, szn, "Regular+Season"); err != nil {
+					return err
 				}
-				if len(plOffReqs) > 0 {
-					if err := GetPlTmGamelogs(c, plOffReqs, dateFrom, dateTo, lg, szn, "Playoffs"); err != nil {
-						return err
-					}
+			}
+			if len(plOffReqs) > 0 {
+				if err := GetPlTmGamelogs(c, plOffReqs, dateFrom, dateTo, lg, szn, "Playoffs"); err != nil {
+					return err
 				}
 			}
 		}

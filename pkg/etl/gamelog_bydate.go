@@ -148,8 +148,7 @@ func GetManyLgSchedules(dateFrom, dateTo string) (LgSznDates, error) {
 				}
 
 				if dt.Before(d1) || dt.After(d2) {
-					fmt.Println(d1, "|", dt)
-					fmt.Println(d2, "|", dt)
+					// fmt.Println(lg, ":", dt, "|", d1, "|", d2)
 					continue
 				}
 

@@ -65,10 +65,7 @@ func custom(r *RunMode) error {
 
 	if df != "" || dt != "" {
 		updateDfDt(&df, &dt)
-		return etl.CustomGamelogsByDate(r.Cnf, df, dt)
-		// return etl.DailyGamelogs(r.Cnf, df)
-		// return etl.
-		// return etl.RunNightlyETL(r.Cnf, df, dt)
+		return etl.CustomGamelogsByDate(r.Cnf, df, dt) // not working right now
 	}
 
 	switch lg {
