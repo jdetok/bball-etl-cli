@@ -27,7 +27,8 @@ type GameDate struct {
 	GDate string `json:"gameDate"`
 	Date  string // formatted
 	Games []struct {
-		Label string `json:"gameLabel"` // will be "" if regular season
+		Label string `json:"gameLabel"`
+		SeriesGNum string `json:"seriesGameNumber"`
 	}
 	IsPlayoff bool
 }
@@ -91,7 +92,13 @@ func GetLgSchedules(date time.Time) (*LeagueSchedules, error) {
 			case "", "Preseason":
 				gdate.IsPlayoff = false
 			default: // NEED TO HARDEN THIS
-				gdate.IsPlayoff = true
+			// 01/16/2025 - the Global Games produce a gameLabel. before assigning true, check also that 
+			// series game num is not filled
+				if gdate.Games[0].SeriesGNum == "" {
+					gdate.IsPlayoff = false
+				} else {
+					gdate.IsPlayoff = true
+				}
 			}
 
 			dt, err := time.Parse("01/02/2006 15:04:05", gdate.GDate)
